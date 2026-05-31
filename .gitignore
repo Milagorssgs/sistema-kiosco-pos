@@ -1,0 +1,15 @@
+# Dependencias de Node (Frontend)
+node_modules/
+dist/
+
+# Entornos y temporales de Python (Backend)
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Base de datos local (¡No queremos subir tus tickets reales!)
+kiosco.db
+
+# Archivos de entorno (contraseñas, etc)
+.env
