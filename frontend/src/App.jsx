@@ -82,7 +82,7 @@ export default function App() {
   const fetchAPI = async (endpoint, method = 'GET', body = null) => {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(`http://127.0.0.1:8000/api/${endpoint}`, opts);
+    const res = await fetch(`http://178.105.42.34:8001/api/${endpoint}`, opts);
     if (!res.ok) throw new Error('Error API');
     return res.json();
   };
