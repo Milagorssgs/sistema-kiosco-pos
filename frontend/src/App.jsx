@@ -104,24 +104,55 @@ export default function App() {
     const intervaloReloj = setInterval(() => setHoraActual(new Date()), 1000);
     return () => clearInterval(intervaloReloj);
   }, []);
+  const comprimirImagen = (archivo) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(archivo);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // Achicamos la foto a un máximo de 400x400 píxeles (ideal para catálogo)
+          const MAX_WIDTH = 400; 
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
 
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // La transformamos a formato WEBP con calidad al 70% (súper liviana)
+          const dataUrl = canvas.toDataURL('image/webp', 0.7);
+          resolve(dataUrl);
+        };
+      };
+    });
+  };
   const manejarSeleccionArchivo = async (e) => {
     const archivo = e.target.files[0];
     if (!archivo) return;
-    const formData = new FormData();
-    formData.append('file', archivo);
-
+    
+    setSubiendoFoto(true);
     try {
-      setSubiendoFoto(true);
-      toast.loading("Subiendo foto...", { id: "upload" });
-      const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Error en servidor");
-      const data = await res.json();
-      setCatForm(prev => ({...prev, imagen: data.url}));
-      toast.success("¡Foto guardada con éxito!", { id: "upload" });
-      playAudio('success');
+      const imagenComprimida = await comprimirImagen(archivo);
+      setCatForm(prev => ({...prev, imagen: imagenComprimida}));
+      toast.success("¡Foto comprimida y cargada!", { id: "upload" });
     } catch (error) {
-      toast.error("Error al subir la foto", { id: "upload" });
+      toast.error("Error al procesar la imagen");
     } finally {
       setSubiendoFoto(false);
     }
@@ -135,21 +166,17 @@ export default function App() {
     }
     if (!archivoImagen) return toast.error("No se detectó ninguna imagen.");
     
-    const formData = new FormData();
-    formData.append('file', archivoImagen);
+    setSubiendoFoto(true);
     try {
-      setSubiendoFoto(true);
-      toast.loading("Subiendo foto...", { id: "upload" });
-      const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Error en servidor");
-      const data = await res.json();
-      setCatForm(prev => ({...prev, imagen: data.url}));
-      toast.success("¡Foto guardada con éxito!", { id: "upload" });
-      playAudio('success');
-    } catch (error) { toast.error("Error al subir la foto", { id: "upload" }); } 
-    finally { setSubiendoFoto(false); }
+      const imagenComprimida = await comprimirImagen(archivoImagen);
+      setCatForm(prev => ({...prev, imagen: imagenComprimida}));
+      toast.success("¡Foto pegada y comprimida!", { id: "upload" });
+    } catch (error) {
+      toast.error("Error al procesar la imagen");
+    } finally {
+      setSubiendoFoto(false);
+    }
   };
-
   const abrirBuscadorGoogle = () => {
     if (!catForm.nombre) return toast.error("Escribí el nombre del repuesto primero");
     const query = encodeURIComponent(`${catForm.nombre} ${catForm.marca} repuesto moto`);
