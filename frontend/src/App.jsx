@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
+const API_URL = "https://sistema-kiosco-pos.vercel.app/api";
+
 const playAudio = (type) => {
   const urls = {
     success: 'https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3', 
@@ -71,7 +73,7 @@ export default function App() {
   const fetchAPI = async (endpoint, method = 'GET', body = null) => {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(`http://127.0.0.1:8000/api/${endpoint}`, opts);
+    const res = await fetch(`${API_URL}/${endpoint}`, opts);
     if (!res.ok) throw new Error('Error API');
     return res.json();
   };
@@ -112,7 +114,7 @@ export default function App() {
     try {
       setSubiendoFoto(true);
       toast.loading("Subiendo foto...", { id: "upload" });
-      const res = await fetch("http://127.0.0.1:8000/api/upload", { method: "POST", body: formData });
+      const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Error en servidor");
       const data = await res.json();
       setCatForm(prev => ({...prev, imagen: data.url}));
@@ -138,7 +140,7 @@ export default function App() {
     try {
       setSubiendoFoto(true);
       toast.loading("Subiendo foto...", { id: "upload" });
-      const res = await fetch("http://127.0.0.1:8000/api/upload", { method: "POST", body: formData });
+      const res = await fetch(`${API_URL}/upload`, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Error en servidor");
       const data = await res.json();
       setCatForm(prev => ({...prev, imagen: data.url}));
@@ -365,7 +367,6 @@ export default function App() {
     } catch(e) { toast.error("Error al registrar"); }
   };
 
-  // CALCULO RESUMENES (HOY, SEMANA, MES)
   let totalHoy = 0, totalSemana = 0, totalMes = 0;
   const hoyDateObj = new Date();
   const inicioHoy = new Date(hoyDateObj.getFullYear(), hoyDateObj.getMonth(), hoyDateObj.getDate()).getTime();
@@ -410,7 +411,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* ALERTAS */}
       {alertasInteligentes.length > 0 && vistaActiva === 'pos' && (
         <div className="max-w-7xl mx-auto px-4 mt-4 animate-fade-in flex flex-col gap-2 print:hidden">
           {alertasInteligentes.map(alerta => (
@@ -438,7 +438,6 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto mt-4 sm:mt-6 px-3 sm:px-4 pb-12 print:mt-0 print:p-0">
         
-        {/* VISTA CAJA POS */}
         {vistaActiva === 'pos' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in relative">
             <div className="lg:col-span-2 space-y-4">
@@ -501,7 +500,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* CARRITO POS */}
             <div className={`rounded-2xl shadow-xl border flex flex-col h-auto max-h-[60vh] lg:max-h-none lg:h-[calc(100vh-120px)] lg:sticky lg:top-24 overflow-hidden ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
               <div className="bg-slate-900 text-white p-3 sm:p-4 text-center flex justify-between items-center border-b-2 border-indigo-600">
                 <h2 className="font-black tracking-widest uppercase text-base sm:text-lg">Ticket Caja</h2>
@@ -616,7 +614,6 @@ export default function App() {
           </div>
         )}
 
-        {/* VISTA CATÁLOGO */}
         {vistaActiva === 'catalogo' && (
            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 animate-fade-in print:hidden">
              
@@ -769,7 +766,6 @@ export default function App() {
            </div>
         )}
 
-        {/* VISTA FINANZAS Y AUDITORÍA */}
         {vistaActiva === 'finanzas' && finanzas && (
           <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 animate-fade-in">
             <div className={`p-2 rounded-2xl shadow-sm border print:hidden flex flex-col sm:flex-row justify-center gap-2 ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
@@ -879,7 +875,7 @@ export default function App() {
                   <button onClick={descargarBackupCSV} className="w-full sm:w-auto flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm sm:text-base font-bold shadow-md"><FileSpreadsheet size={16}/> Descargar Excel</button>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:gap-6">
                   <input type="text" placeholder="Buscar ticket o monto..." value={filtroHistorial} onChange={(e) => setFiltroHistorial(e.target.value)} className={`w-full rounded-xl py-2 sm:py-3 px-3 sm:px-4 text-sm sm:text-base font-medium outline-none border focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} />
                   <select value={filtroMetodo} onChange={(e) => setFiltroMetodo(e.target.value)} className={`rounded-xl p-2 sm:p-3 text-sm sm:text-base font-medium outline-none border focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
                     <option value="Todos">Todos los pagos</option>
@@ -928,7 +924,7 @@ export default function App() {
                                 </div>
                               )}
                             </td>
-                            <td className={`p-3 sm:p-4 font-black ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>${formatMoney(v.total)}</td>
+                            <td className={`p-3 sm:p-4 font-black ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{formatMoney(v.total)}</td>
                             <td className="p-3 sm:p-4 text-center"><button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 sm:p-2 rounded-lg"><Trash2 size={16}/></button></td>
                           </tr>
                         );
@@ -944,7 +940,6 @@ export default function App() {
           </div>
         )}
 
-        {/* VISTA COSTEOS E INVERSIONES */}
         {vistaActiva === 'produccion' && (
           <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in print:hidden">
             <div className="lg:col-span-1 space-y-4 sm:space-y-6">
@@ -1020,8 +1015,8 @@ export default function App() {
                     <div key={r.id} className={`border p-3 sm:p-4 rounded-2xl relative overflow-hidden ${modoOscuro ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
                       <div className={`absolute top-0 left-0 w-1.5 h-full ${ganancia > 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                       <span className={`font-black ml-2 text-sm sm:text-base ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{r.producto}</span>
-                      <span className="text-[10px] sm:text-xs font-bold text-slate-400 ml-1">({unidades} uni.)</span>
-                      <div className={`flex justify-between text-[10px] sm:text-xs font-medium p-1.5 sm:p-2 rounded-lg ml-2 mt-2 ${modoOscuro ? 'bg-slate-900 text-slate-300' : 'bg-white text-slate-600'}`}>
+                      <span className="text-[10px] sm:text-xs font-bold text-slate-400 ml-1">({unids => unids} uni.)</span>
+                      <div className={`flex justify-between text-[10px] sm:text-xs font-bold p-1.5 sm:p-2 rounded-lg ml-2 mt-2 ${modoOscuro ? 'bg-slate-900 text-slate-300' : 'bg-white text-slate-600'}`}>
                         <span>Inv: <strong className="text-rose-500">${formatMoney(costoInvertido)}</strong></span>
                       </div>
                       <div className={`mt-2 font-black text-[10px] sm:text-sm px-2 py-1 rounded-lg ml-2 inline-block ${ganancia > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
