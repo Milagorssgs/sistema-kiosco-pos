@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
-const API_URL = "https://https://kiosco-backend-db.vercel.app/api";;
+const API_URL = "https://kiosco-backend-db.vercel.app/api";
 
 const playAudio = (type) => {
   const urls = {
