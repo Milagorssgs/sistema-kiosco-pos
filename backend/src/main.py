@@ -10,9 +10,14 @@ from supabase import create_client, Client
 import os
 
 app = FastAPI(title="Sistema POS Repuestos MotoGest")
+from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- CREDENCIALES DE SUPABASE (NUBE) ---
