@@ -291,7 +291,7 @@ export default function App() {
         nuevo[existeIdx].cantidad = (parseFloat(nuevo[existeIdx].cantidad) || 0) + 1;
         return nuevo;
       }
-      return [...prev, { idUnico, nombre: prod.nombre, unidad: 'Unidad', precioBase: precioVentaNum, cantidad: 1, stockMax: prod.stock_actual }];
+      return [...prev, { idUnico, nombre: prod.nombre, marca: prod.marca, modelos_compatibles: prod.modelos_compatibles, unidad: 'Unidad', precioBase: precioVentaNum, cantidad: 1, stockMax: prod.stock_actual }];
     });
   };
 
