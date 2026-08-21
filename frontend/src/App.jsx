@@ -448,7 +448,7 @@ export default function App() {
   if (!isLogueado) {
     return (
       <div translate="no" className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans selection:bg-indigo-500/30">
-        <Toaster position="top-center" />
+        <Toaster position="top-center" toastOptions={{ duration: 10000 }} />
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-sm animate-fade-in text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-indigo-600"></div>
           <div className="bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-slate-700">
@@ -479,7 +479,7 @@ export default function App() {
   }
   return (
     <div translate="no" className={`min-h-screen font-sans print:bg-white selection:bg-indigo-200 ${modoOscuro ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
-      <Toaster position="top-center" className="print:hidden" />
+      <Toaster position="top-center" className="print:hidden" toastOptions={{ duration: 10000 }} />
       
       <header className={`shadow-md sticky top-0 z-30 print:hidden border-b-4 ${modoOscuro ? 'bg-slate-900 border-indigo-500 text-white' : 'bg-slate-900 border-indigo-600 text-white'}`}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
