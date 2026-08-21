@@ -122,8 +122,10 @@ export default function App() {
       setHistorialProd(await fetchAPI('rendimientos'));
       cargarFinanzas('dia');
       const alertasNuevas = await fetchAPI('alertas');
-      setAlertasInteligentes(alertasNuevas);
-      if (alertasNuevas.length > 0) playAudio('notification');
+      setAlertasInteligentes(alertasNuevas);s
+      if (alertasNuevas.length > 0) {
+      playAudio('notification');
+      setTimeout(() => setAlertasInteligentes([]), 10000);
     } catch (e) { 
       toast.error("Error al conectar con servidor"); 
     }
@@ -479,7 +481,7 @@ export default function App() {
   }
   return (
     <div translate="no" className={`min-h-screen font-sans print:bg-white selection:bg-indigo-200 ${modoOscuro ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
-      <Toaster position="top-center" className="print:hidden" toastOptions={{ duration: 10000 }} />
+      <Toaster position="top-center" className="print:hidden" />
       
       <header className={`shadow-md sticky top-0 z-30 print:hidden border-b-4 ${modoOscuro ? 'bg-slate-900 border-indigo-500 text-white' : 'bg-slate-900 border-indigo-600 text-white'}`}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth">
@@ -513,7 +515,7 @@ export default function App() {
 
       {alertasInteligentes.length > 0 && vistaActiva === 'pos' && (
         <div className="max-w-7xl mx-auto px-4 mt-4 animate-fade-in flex flex-col gap-2 print:hidden">
-          {alertasInteligentes.map(alerta => (
+          {alertasInteligentes.slice(0, 3).map(alerta => (
             <div key={alerta.id} className={`flex items-center justify-between p-3 rounded-xl shadow-sm border ${
                 alerta.tipo === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' : 
                 alerta.tipo === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 
