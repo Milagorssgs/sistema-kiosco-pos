@@ -619,7 +619,44 @@ export default function App() {
                       <div key={item.idUnico} className={`flex flex-col p-3 rounded-xl shadow-sm border transition-colors ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                         <div className="flex justify-between items-start mb-2">
                           <div className="flex-1 pr-2">
-                            <p className={`font-bold text-xs sm:text-sm leading-tight ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{item.nombre}</p>
+                            <p className={`font-bold text-xs sm:text-sm leading-tight ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{item.nombre}</p> 
+                            {/* SELECTORES DE VARIANTE EN EL CARRITO */}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {item.marca && item.marca.includes(',') && (
+                  <select
+                    className={`text-[10px] font-bold px-1 py-0.5 rounded outline-none cursor-pointer border ${modoOscuro ? 'bg-slate-800 text-blue-300 border-blue-900/50' : 'bg-blue-50 text-blue-700 border-blue-200'}`}
+                    value={item.marcaSeleccionada || ''}
+                    onChange={(e) => {
+                      const nuevoCarrito = [...carrito];
+                      nuevoCarrito[idx] = { ...nuevoCarrito[idx], marcaSeleccionada: e.target.value };
+                      setCarrito(nuevoCarrito);
+                    }}
+                  >
+                    <option value="">¿Qué marca?</option>
+                    {item.marca.split(',').map((m, i) => (
+                      <option key={i} value={m.trim()}>{m.trim()}</option>
+                    ))}
+                  </select>
+                )}
+
+                {item.modelos_compatibles && item.modelos_compatibles.includes(',') && (
+                  <select
+                    className={`text-[10px] font-bold px-1 py-0.5 rounded outline-none cursor-pointer border ${modoOscuro ? 'bg-slate-800 text-emerald-300 border-emerald-900/50' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}
+                    value={item.modeloSeleccionado || ''}
+                    onChange={(e) => {
+                      const nuevoCarrito = [...carrito];
+                      nuevoCarrito[idx] = { ...nuevoCarrito[idx], modeloSeleccionado: e.target.value };
+                      setCarrito(nuevoCarrito);
+                    }}
+                  >
+                    <option value="">¿Qué modelo?</option>
+                    {item.modelos_compatibles.split(',').map((m, i) => (
+                      <option key={i} value={m.trim()}>{m.trim()}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              {/* FIN SELECTORES */}
                             {item.unidad === 'Libre' && <p className={`text-[9px] font-bold uppercase mt-1 inline-block px-1.5 py-0.5 rounded ${modoOscuro ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>Servicio Libre</p>}
                           </div>
                           <span className={`font-black text-base sm:text-lg pt-1 ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>${formatMoney(cantSegura * pbSeguro)}</span>
