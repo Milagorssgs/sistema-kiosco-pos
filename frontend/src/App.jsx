@@ -837,13 +837,15 @@ export default function App() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${modoOscuro ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'}`}>{prod.codigo_sku || 'S/N'}</span>
-                          <p className={`font-black text-sm sm:text-base truncate ${modoOscuro ? 'text-white' : 'text-slate-800'}`} title={prod.nombre}>{prod.nombre}</p>
-                        </div>
-                        <div className="text-[10px] sm:text-xs text-slate-400 flex flex-wrap gap-2 sm:gap-3 mb-1 sm:mb-2">
-                          <span>Marca: <strong className={modoOscuro ? 'text-slate-200' : 'text-slate-700'}>{prod.marca || 'S/M'}</strong></span>
-                          <span className="truncate" title={prod.modelos_compatibles}>Para: <strong className={modoOscuro ? 'text-slate-200' : 'text-slate-700'}>{prod.modelos_compatibles || 'Cualquiera'}</strong></span>
-                        </div>
+          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${modoOscuro ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-700'}`}>
+            {prod.codigo_sku || 'S/N'}
+          </span>
+          <p className={`font-black text-sm sm:text-base truncate ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{prod.nombre}</p>
+        </div>
+          <div className="flex flex-wrap mt-1 mb-2">
+            {renderEtiquetas(prod.marca, 'bg-blue-800/80', 'text-blue-100')}
+            {renderEtiquetas(prod.modelos_compatibles, 'bg-emerald-800/80', 'text-emerald-100')}
+          </div>
                         <div className="flex flex-wrap gap-2">
                           <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider ${prod.stock_actual <= prod.stock_minimo ? 'bg-rose-500/20 text-rose-400 animate-pulse' : 'bg-emerald-500/20 text-emerald-400'}`}>Stock: {prod.stock_actual}</span>
                           {prod.ubicacion_deposito && <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${modoOscuro ? 'bg-indigo-950 text-indigo-300' : 'bg-indigo-50 text-indigo-700'}`}>Lugar: {prod.ubicacion_deposito}</span>}
