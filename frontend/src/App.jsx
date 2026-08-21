@@ -33,7 +33,20 @@ export default function App() {
   const [isLogueado, setIsLogueado] = useState(localStorage.getItem('auth_motogest') === 'true');
   const [claveInput, setClaveInput] = useState('');
   const CLAVE_SECRETA = "moto2026"; // Acá podés escribir la contraseña que quieras
-
+// --- FÁBRICA DE ETIQUETAS ---
+  const renderEtiquetas = (texto, colorFondo, colorTexto) => {
+    if (!texto) return null;
+    // Cortamos el texto por las comas y dibujamos una etiqueta por cada palabra
+    return texto.split(',').map((palabra, index) => (
+      <span 
+        key={index} 
+        className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded-md mr-1 mb-1 shadow-sm ${colorFondo} ${colorTexto}`}
+      >
+        {palabra.trim()}
+      </span>
+    ));
+  };
+  // ----------------------------
   const manejarLogin = (e) => {
     e.preventDefault();
     if (claveInput === CLAVE_SECRETA) {
@@ -553,9 +566,11 @@ export default function App() {
 
                       <div className="flex justify-between items-start mb-1">
                         <h3 className={`font-bold text-xs sm:text-sm leading-tight line-clamp-2 ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{prod.nombre}</h3>
-                        {prod.marca && <span className={`text-[8px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ml-1 shrink-0 hidden sm:block ${modoOscuro ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>{prod.marca}</span>}
-                      </div>
-                      <p className="text-[9px] sm:text-[10px] text-slate-400 line-clamp-1 mb-2">Para: <span className="font-bold">{prod.modelos_compatibles || 'Cualquiera'}</span></p>
+                       </div>
+        <div className="flex flex-wrap mt-1 mb-2">
+          {renderEtiquetas(prod.marca, 'bg-blue-800/80', 'text-blue-100')}
+          {renderEtiquetas(prod.modelos_compatibles, 'bg-emerald-800/80', 'text-emerald-100')}
+        </div>
                       
                       <div className={`mt-auto flex justify-between items-end pt-2 border-t ${modoOscuro ? 'border-slate-700' : 'border-slate-50'}`}>
                         <div className="flex flex-col">
