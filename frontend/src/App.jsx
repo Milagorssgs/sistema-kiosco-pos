@@ -126,8 +126,8 @@ export default function App() {
       if (alertasNuevas.length > 0) {
       playAudio('notification');
       setTimeout(() => setAlertasInteligentes([]), 10000);}
-    } catch (e) { 
-      toast.error("Error al conectar con servidor"); 
+    } catch (e) {
+        toast.error("Error al conectar con servidor");
     }
   };
 
