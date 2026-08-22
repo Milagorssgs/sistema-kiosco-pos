@@ -29,6 +29,7 @@ const formatMoney = (val) => {
 };
 
 export default function App() {
+  const [paginaActual, setPaginaActual] = useState(1);
   // --- SEGURIDAD Y LOGIN ---
   const [isLogueado, setIsLogueado] = useState(localStorage.getItem('auth_motogest') === 'true');
   const [claveInput, setClaveInput] = useState('');
@@ -866,7 +867,7 @@ export default function App() {
               </div>
 
               <div className="space-y-3">
-                {catalogoFiltradoABM.map(prod => (
+                {catalogoFiltradoABM.slice((paginaActual - 1) * 10, paginaActual * 10).map(prod => (
                   <div key={prod.id} className={`flex flex-col sm:flex-row justify-between sm:items-center p-3 rounded-xl border shadow-sm transition-colors gap-3 sm:gap-0 ${modoOscuro ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-slate-50 border-slate-200 hover:border-indigo-300'}`}>
                     
                     <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
@@ -901,6 +902,30 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+                {/* CONTROLES DE PAGINACIÓN */}
+            {Math.ceil(catalogoFiltradoABM.length / 10) > 1 && (
+              <div className="flex justify-center items-center gap-4 my-8 w-full print:hidden">
+                <button
+                  onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
+                  disabled={paginaActual === 1}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${paginaActual === 1 ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                >
+                  Anterior
+                </button>
+
+                <span className="text-xs font-bold text-slate-400">
+                  Página {paginaActual} de {Math.ceil(catalogoFiltradoABM.length / 10)}
+                </span>
+
+                <button
+                  onClick={() => setPaginaActual(prev => Math.min(prev + 1, Math.ceil(catalogoFiltradoABM.length / 10)))}
+                  disabled={paginaActual === Math.ceil(catalogoFiltradoABM.length / 10)}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${paginaActual === Math.ceil(catalogoFiltradoABM.length / 10) ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
                 {catalogoFiltradoABM.length === 0 && (
                   <p className="text-slate-400 text-sm italic text-center py-8">No se encontraron productos.</p>
                 )}
