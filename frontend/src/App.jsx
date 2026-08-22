@@ -560,7 +560,7 @@ export default function App() {
                 </div>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
-                  {catalogoFiltradoPOS.map(prod => (
+                  {catalogoFiltradoPOS.slice((paginaActual - 1) * 10, paginaActual * 10).map(prod => (
                     <div key={prod.id} className={`border rounded-xl p-2.5 sm:p-3 shadow-sm flex flex-col group cursor-pointer transition-all hover:scale-[1.02] ${modoOscuro ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-400'}`} onClick={() => agregarAlCarrito(prod)}>
                       <div className={`w-full h-24 sm:h-32 mb-2 rounded-lg flex items-center justify-center overflow-hidden border relative ${modoOscuro ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200/50'}`}>
                         <span className="absolute top-1 right-1 text-[8px] sm:text-[9px] bg-indigo-600 font-black px-1.5 py-0.5 rounded shadow-sm text-white uppercase">{prod.categoria}</span>
@@ -585,6 +585,30 @@ export default function App() {
                     </div>
                   ))}
                 </div>
+                {/* CONTROLES DE PAGINACIÓN CAJA */}
+            {Math.ceil(catalogoFiltradoPOS.length / 10) > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-6 mb-4 w-full print:hidden">
+                <button
+                  onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
+                  disabled={paginaActual === 1}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${paginaActual === 1 ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                >
+                  Anterior
+                </button>
+
+                <span className="text-xs font-bold text-slate-400">
+                  Página {paginaActual} de {Math.ceil(catalogoFiltradoPOS.length / 10)}
+                </span>
+
+                <button
+                  onClick={() => setPaginaActual(prev => Math.min(prev + 1, Math.ceil(catalogoFiltradoPOS.length / 10)))}
+                  disabled={paginaActual === Math.ceil(catalogoFiltradoPOS.length / 10)}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${paginaActual === Math.ceil(catalogoFiltradoPOS.length / 10) ? 'opacity-40 cursor-not-allowed bg-slate-800 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                >
+                  Siguiente
+                </button>
+              </div>
+            )}
               </div>
 
               <div className={`p-4 sm:p-5 rounded-2xl shadow-sm border ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
