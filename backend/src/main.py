@@ -166,35 +166,43 @@ class RendimientoCreate(BaseModel):
     precio_venta_estimado: float
     cantidad_producida: int
 
-# --- RUTAS DE AUTENTICACIÓN ---
-@app.post("/api/crear-admin-inicial")
-def crear_admin_inicial(db: Session = Depends(get_db)):
-    """Ejecutá esto UNA VEZ en el navegador para crear tu primer usuario, luego podés borrar la ruta"""
-    existe = db.query(DBUsuario).filter(DBUsuario.email == "admin@motogest.com").first()
-    if existe:
-        return {"mensaje": "El usuario ya existe"}
+# --- HERRAMIENTA EXCLUSIVA PARA EL DUEÑO DEL SISTEMA ---
+class NuevoCliente(BaseModel):
+    nombre_local: str
+    email: str
+    password: str
+
+@app.post("/api/superadmin/registrar-cliente")
+def registrar_nuevo_cliente(cliente: NuevoCliente, db: Session = Depends(get_db)):
+    """Usá esta ruta desde el Swagger (/docs) para dar de alta a los locales que te compren el sistema"""
     
+    # 1. Verificamos que el mail no esté repetido
+    existe = db.query(DBUsuario).filter(DBUsuario.email == cliente.email).first()
+    if existe:
+        raise HTTPException(status_code=400, detail="Este email ya está registrado")
+    
+    # 2. Creamos el nuevo negocio en la base de datos
+    nuevo_local = DBLocal(nombre=cliente.nombre_local)
+    db.add(nuevo_local)
+    db.commit() 
+    db.refresh(nuevo_local) # Esto nos devuelve el ID que le tocó al local
+    
+    # 3. Le creamos su usuario seguro vinculado a ese negocio
     nuevo_usuario = DBUsuario(
-        email="admin@motogest.com",
-        password_hash=pwd_context.hash("123456"), # Clave por defecto
-        local_id=1
+        local_id=nuevo_local.id,
+        email=cliente.email,
+        password_hash=pwd_context.hash(cliente.password),
+        rol="admin"
     )
     db.add(nuevo_usuario)
     db.commit()
-    return {"mensaje": "Usuario creado: admin@motogest.com | Clave: 123456"}
-
-@app.get("/api/cambiar-acceso")
-def cambiar_acceso(nuevo_email: str, nueva_clave: str, db: Session = Depends(get_db)):
-    """Ruta temporal para cambiar tu usuario y contraseña con un link"""
-    usuario = db.query(DBUsuario).filter(DBUsuario.local_id == 1).first()
-    if not usuario:
-        return {"error": "Todavía no hay un usuario creado para el Local 1"}
     
-    usuario.email = nuevo_email
-    usuario.password_hash = pwd_context.hash(nueva_clave)
-    db.commit()
-    return {"mensaje": f"¡Éxito! Tu nuevo acceso es -> Email: {nuevo_email} | Clave: (la que elegiste)"}
-
+    return {
+        "mensaje": "¡Cliente registrado con éxito!",
+        "local_id": nuevo_local.id,
+        "negocio": cliente.nombre_local,
+        "email_acceso": cliente.email
+    }
 @app.post("/api/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     usuario = db.query(DBUsuario).filter(DBUsuario.email == form_data.username).first()
