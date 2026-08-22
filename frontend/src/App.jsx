@@ -4,7 +4,7 @@ import {
   Trash2, Printer, Plus, Minus, X, Check, Search, TrendingUp, AlertTriangle, 
   Info, Clock, Pencil, FileSpreadsheet, Target, ClipboardList,
   Wrench, Bike, PackageSearch, Image as ImageIcon, ExternalLink, UploadCloud,
-  Moon, Sun, Smartphone, Lock, KeyRound, LogOut
+  Moon, Sun, Smartphone, Lock, KeyRound, LogOut, Mail
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -33,6 +33,7 @@ export default function App() {
   // --- SEGURIDAD Y LOGIN ---
   const [isLogueado, setIsLogueado] = useState(localStorage.getItem('auth_motogest') === 'true');
   const [claveInput, setClaveInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
   const CLAVE_SECRETA = "moto2026"; // Acá podés escribir la contraseña que quieras
 // --- FÁBRICA DE ETIQUETAS ---
   const renderEtiquetas = (texto, colorFondo, colorTexto) => {
@@ -48,20 +49,32 @@ export default function App() {
     ));
   };
   // ----------------------------
-  const manejarLogin = (e) => {
+  const manejarLogin = async (e) => {
     e.preventDefault();
-    if (claveInput === CLAVE_SECRETA) {
-      localStorage.setItem('auth_motogest', 'true');
+    try {
+      // Preparamos los datos en el formato seguro que pide FastAPI
+      const formData = new URLSearchParams();
+      formData.append('username', emailInput);
+      formData.append('password', claveInput);
+
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+
+      if (!res.ok) throw new Error("Credenciales inválidas");
+
+      const data = await res.json();
+      // ¡Guardamos la llave maestra!
+      localStorage.setItem('motogest_token', data.access_token); 
       setIsLogueado(true);
-      playAudio('success');
-      toast.success("¡Bienvenida a MotoGest!");
-    } else {
-      playAudio('error');
-      toast.error("Contraseña incorrecta");
-      setClaveInput('');
+      toast.success("¡Bienvenido a MotoGest!");
+      cargarDatos(); // Cargamos los datos de este local específico
+    } catch (error) {
+      toast.error("Email o contraseña incorrectos");
     }
   };
-
   const cerrarSesion = () => {
     localStorage.removeItem('auth_motogest');
     setIsLogueado(false);
@@ -109,13 +122,22 @@ export default function App() {
   });
 
   const fetchAPI = async (endpoint, method = 'GET', body = null) => {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    // Buscamos si hay un token guardado en el navegador
+    const token = localStorage.getItem('motogest_token');
+    const headers = { 'Content-Type': 'application/json' };
+    
+    // Si hay token, se lo pegamos al pedido
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const opts = { method, headers };
     if (body) opts.body = JSON.stringify(body);
+    
     const res = await fetch(`${API_URL}/${endpoint}`, opts);
     if (!res.ok) throw new Error('Error API');
     return res.json();
   };
-
   const cargarDatos = async () => {
     try {
       setCatalogo(await fetchAPI('productos'));
@@ -462,17 +484,29 @@ export default function App() {
           
           <form onSubmit={manejarLogin} className="space-y-4">
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><KeyRound size={18}/></span>
-              <input 
-                type="password" 
-                placeholder="Ingresar contraseña..." 
-                value={claveInput}
-                onChange={(e) => setClaveInput(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-3 pl-11 pr-4 font-bold outline-none focus:border-indigo-500 transition-colors placeholder-slate-600"
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><Mail size={18}/></span>
+              <input
+                type="email"
+                placeholder="Email del local..."
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-3 pl-11 pr-4 font-bold outline-none focus:border-indigo-500"
                 autoFocus
               />
             </div>
-            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl uppercase text-sm tracking-wider shadow-md transition-colors">
+            
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"><KeyRound size={18}/></span>
+              <input
+                type="password"
+                placeholder="Ingresar contraseña..."
+                value={claveInput}
+                onChange={(e) => setClaveInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-3 pl-11 pr-4 font-bold outline-none focus:border-indigo-500"
+              />
+            </div>
+            
+            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl uppercase text-sm tracking-widest">
               Ingresar al sistema
             </button>
           </form>
