@@ -183,6 +183,18 @@ def crear_admin_inicial(db: Session = Depends(get_db)):
     db.commit()
     return {"mensaje": "Usuario creado: admin@motogest.com | Clave: 123456"}
 
+@app.get("/api/cambiar-acceso")
+def cambiar_acceso(nuevo_email: str, nueva_clave: str, db: Session = Depends(get_db)):
+    """Ruta temporal para cambiar tu usuario y contraseña con un link"""
+    usuario = db.query(DBUsuario).filter(DBUsuario.local_id == 1).first()
+    if not usuario:
+        return {"error": "Todavía no hay un usuario creado para el Local 1"}
+    
+    usuario.email = nuevo_email
+    usuario.password_hash = pwd_context.hash(nueva_clave)
+    db.commit()
+    return {"mensaje": f"¡Éxito! Tu nuevo acceso es -> Email: {nuevo_email} | Clave: (la que elegiste)"}
+
 @app.post("/api/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     usuario = db.query(DBUsuario).filter(DBUsuario.email == form_data.username).first()
