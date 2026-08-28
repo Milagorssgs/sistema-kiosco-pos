@@ -109,6 +109,16 @@ class DBRendimiento(Base):
     cantidad_producida = Column(Integer, nullable=False)
     fecha = Column(DateTime, default=datetime.now)
 
+class DBPresupuesto(Base):
+    __tablename__ = "presupuestos"
+    id = Column(Integer, primary_key=True, index=True)
+    local_id = Column(Integer, default=1)
+    cliente = Column(String, default="Consumidor Final")
+    total = Column(Float, nullable=False)
+    detalle_ticket = Column(String, nullable=False) # Guardaremos los items acá
+    observaciones = Column(String, default="")
+    fecha = Column(DateTime, default=datetime.now)
+
 Base.metadata.create_all(bind=engine)
 
 # --- DEPENDENCIA DE SEGURIDAD (EL GUARDIÁN) ---
@@ -356,3 +366,28 @@ def obtener_alertas(db: Session = Depends(get_db), usuario: DBUsuario = Depends(
         elif p.stock_actual <= p.stock_minimo:
             alertas.append({"id": f"stock_bajo_{p.id}", "tipo": "warning", "titulo": "Alerta de Stock Mínimo", "mensaje": f"Te quedan solo {p.stock_actual} unidades de '{p.nombre}'."})
     return alertas
+
+# --- MÓDULO DE PRESUPUESTOS (NO AFECTA STOCK) ---
+class PresupuestoCreate(BaseModel):
+    cliente: str = "Consumidor Final"
+    total: float
+    detalle_ticket: str
+    observaciones: str = ""
+
+@app.post("/api/presupuestos")
+def crear_presupuesto(presupuesto: PresupuestoCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+    nuevo = DBPresupuesto(
+        local_id=usuario.local_id,
+        cliente=presupuesto.cliente,
+        total=presupuesto.total,
+        detalle_ticket=presupuesto.detalle_ticket,
+        observaciones=presupuesto.observaciones
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+@app.get("/api/presupuestos")
+def obtener_presupuestos(db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+    return db.query(DBPresupuesto).filter(DBPresupuesto.local_id == usuario.local_id).order_by(DBPresupuesto.id.desc()).all()
