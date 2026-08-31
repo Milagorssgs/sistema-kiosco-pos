@@ -391,3 +391,27 @@ def crear_presupuesto(presupuesto: PresupuestoCreate, db: Session = Depends(get_
 @app.get("/api/presupuestos")
 def obtener_presupuestos(db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
     return db.query(DBPresupuesto).filter(DBPresupuesto.local_id == usuario.local_id).order_by(DBPresupuesto.id.desc()).all()
+# --- MÓDULO DE PRESUPUESTOS (NO AFECTA STOCK) ---
+class PresupuestoCreate(BaseModel):
+    cliente: str = "Consumidor Final"
+    total: float
+    detalle_ticket: str
+    observaciones: str = ""
+
+@app.post("/api/presupuestos")
+def crear_presupuesto(presupuesto: PresupuestoCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+    nuevo = DBPresupuesto(
+        local_id=usuario.local_id,
+        cliente=presupuesto.cliente,
+        total=presupuesto.total,
+        detalle_ticket=presupuesto.detalle_ticket,
+        observaciones=presupuesto.observaciones
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+@app.get("/api/presupuestos")
+def obtener_presupuestos(db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+    return db.query(DBPresupuesto).filter(DBPresupuesto.local_id == usuario.local_id).order_by(DBPresupuesto.id.desc()).all()
