@@ -1,3 +1,6 @@
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { FileText, Download } from 'lucide-react'; // Agregamos íconos para el PDF
 import { useState, useEffect } from 'react';
 import { 
   Store, Tag, Wallet, Banknote, CreditCard, SplitSquareHorizontal, 
@@ -30,15 +33,22 @@ const formatMoney = (val) => {
 
 export default function App() {
   const [paginaActual, setPaginaActual] = useState(1);
+  
+  // Estados para Presupuestos
+  const [carritoPresupuesto, setCarritoPresupuesto] = useState([]);
+  const [clientePresupuesto, setClientePresupuesto] = useState('');
+  const [notasPresupuesto, setNotasPresupuesto] = useState('');
+  const [busquedaPresupuesto, setBusquedaPresupuesto] = useState('');
+  
   // --- SEGURIDAD Y LOGIN ---
   const [isLogueado, setIsLogueado] = useState(localStorage.getItem('auth_motogest') === 'true');
   const [claveInput, setClaveInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const CLAVE_SECRETA = "moto2026"; // Acá podés escribir la contraseña que quieras
-// --- FÁBRICA DE ETIQUETAS ---
+
+  // --- FÁBRICA DE ETIQUETAS ---
   const renderEtiquetas = (texto, colorFondo, colorTexto) => {
     if (!texto) return null;
-    // Cortamos el texto por las comas y dibujamos una etiqueta por cada palabra
     return texto.split(',').map((palabra, index) => (
       <span 
         key={index} 
@@ -48,11 +58,11 @@ export default function App() {
       </span>
     ));
   };
+  
   // ----------------------------
   const manejarLogin = async (e) => {
     e.preventDefault();
     try {
-      // Preparamos los datos en el formato seguro que pide FastAPI
       const formData = new URLSearchParams();
       formData.append('username', emailInput);
       formData.append('password', claveInput);
@@ -66,19 +76,92 @@ export default function App() {
       if (!res.ok) throw new Error("Credenciales inválidas");
 
       const data = await res.json();
-      // ¡Guardamos la llave maestra!
       localStorage.setItem('motogest_token', data.access_token); 
       setIsLogueado(true);
       toast.success("¡Bienvenido a MotoGest!");
-      cargarDatos(); // Cargamos los datos de este local específico
+      cargarDatos();
     } catch (error) {
       toast.error("Email o contraseña incorrectos");
     }
   };
+
   const cerrarSesion = () => {
     localStorage.removeItem('auth_motogest');
     setIsLogueado(false);
   };
+
+  // --- GENERADORES DE PDF ---
+  const generarPDF = (titulo, numeroDoc, cliente, items, total, notas = "") => {
+    const doc = new jsPDF();
+
+    // Cabecera del negocio
+    doc.setFontSize(22);
+    doc.setTextColor(79, 70, 229); // Color Indigo
+    doc.text("MOTOGEST", 14, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("Repuestos y Accesorios para Motos", 14, 26);
+
+    // Info del Documento
+    doc.setFontSize(16);
+    doc.setTextColor(0);
+    doc.text(titulo, 130, 20);
+    doc.setFontSize(10);
+    doc.text(`Nº: ${String(numeroDoc).padStart(6, '0')}`, 130, 26);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 130, 32);
+
+    // Datos del Cliente
+    doc.setFontSize(11);
+    doc.text(`Cliente: ${cliente || 'Consumidor Final'}`, 14, 40);
+    if (notas) doc.text(`Observaciones: ${notas}`, 14, 46);
+
+    // Tabla de Productos
+    const tableColumn = ["Producto", "Cant.", "Precio Unit.", "Subtotal"];
+    const tableRows = items.map(item => [
+      item.nombre || item.producto,
+      item.cantidad,
+      `$${formatMoney(item.precio_venta || item.precioBase || item.precio)}`,
+      `$${formatMoney((item.precio_venta || item.precioBase || item.precio) * item.cantidad)}`
+    ]);
+
+    doc.autoTable({
+      startY: notas ? 52 : 46,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'striped',
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+
+    // Total
+    const finalY = doc.lastAutoTable.finalY;
+    doc.setFontSize(14);
+    doc.text(`TOTAL: $${formatMoney(total)}`, 140, finalY + 10);
+
+    doc.save(`${titulo}_${numeroDoc}.pdf`);
+  };
+
+  const guardarYDescargarPresupuesto = async () => {
+    if (carritoPresupuesto.length === 0) return toast.error("Agregá productos al presupuesto");
+    const total = carritoPresupuesto.reduce((acc, item) => acc + (item.precio_venta * item.cantidad), 0);
+
+    try {
+      const res = await fetchAPI('presupuestos', 'POST', {
+        cliente: clientePresupuesto,
+        total: total,
+        detalle_ticket: JSON.stringify(carritoPresupuesto),
+        observaciones: notasPresupuesto
+      });
+      generarPDF("PRESUPUESTO", res.id, clientePresupuesto, carritoPresupuesto, total, notasPresupuesto);
+      toast.success("Presupuesto generado exitosamente");
+      setCarritoPresupuesto([]);
+      setClientePresupuesto('');
+      setNotasPresupuesto('');
+    } catch (e) {
+      toast.error("Error al guardar presupuesto");
+    }
+  };
+
   // -------------------------
   const [vistaActiva, setVistaActiva] = useState('pos');
   const [horaActual, setHoraActual] = useState(new Date());
@@ -122,11 +205,9 @@ export default function App() {
   });
 
   const fetchAPI = async (endpoint, method = 'GET', body = null) => {
-    // Buscamos si hay un token guardado en el navegador
     const token = localStorage.getItem('motogest_token');
     const headers = { 'Content-Type': 'application/json' };
     
-    // Si hay token, se lo pegamos al pedido
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -138,6 +219,7 @@ export default function App() {
     if (!res.ok) throw new Error('Error API');
     return res.json();
   };
+
   const cargarDatos = async () => {
     try {
       setCatalogo(await fetchAPI('productos'));
@@ -145,10 +227,11 @@ export default function App() {
       setHistorialProd(await fetchAPI('rendimientos'));
       cargarFinanzas('dia');
       const alertasNuevas = await fetchAPI('alertas');
-      setAlertasInteligentes(alertasNuevas);s
+      setAlertasInteligentes(alertasNuevas);
       if (alertasNuevas.length > 0) {
-      playAudio('notification');
-      setTimeout(() => setAlertasInteligentes([]), 10000);}
+        playAudio('notification');
+        setTimeout(() => setAlertasInteligentes([]), 10000);
+      }
     } catch (e) {
         //toast.error("Error al conectar con servidor");
     }
@@ -166,6 +249,7 @@ export default function App() {
     const intervaloReloj = setInterval(() => setHoraActual(new Date()), 1000);
     return () => clearInterval(intervaloReloj);
   }, []);
+
   const comprimirImagen = (archivo) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -175,7 +259,6 @@ export default function App() {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          // Achicamos la foto a un máximo de 400x400 píxeles (ideal para catálogo)
           const MAX_WIDTH = 400; 
           const MAX_HEIGHT = 400;
           let width = img.width;
@@ -197,13 +280,13 @@ export default function App() {
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           
-          // La transformamos a formato WEBP con calidad al 70% (súper liviana)
           const dataUrl = canvas.toDataURL('image/webp', 0.7);
           resolve(dataUrl);
         };
       };
     });
   };
+
   const manejarSeleccionArchivo = async (e) => {
     const archivo = e.target.files[0];
     if (!archivo) return;
@@ -239,6 +322,7 @@ export default function App() {
       setSubiendoFoto(false);
     }
   };
+
   const abrirBuscadorGoogle = () => {
     if (!catForm.nombre) return toast.error("Escribí el nombre del repuesto primero");
     const query = encodeURIComponent(`${catForm.nombre} ${catForm.marca} repuesto moto`);
@@ -514,6 +598,7 @@ export default function App() {
       </div>
     );
   }
+  
   return (
     <div translate="no" className={`min-h-screen font-sans print:bg-white selection:bg-indigo-200 ${modoOscuro ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
       <Toaster position="top-center" className="print:hidden" />
@@ -523,6 +608,7 @@ export default function App() {
           <div className="flex gap-1 sm:gap-2 items-center">
             {[
               { id: 'pos', icon: Store, label: 'Caja' },
+              { id: 'presupuestos', icon: FileText, label: 'Presupuestos' },
               { id: 'catalogo', icon: Wrench, label: 'Catálogo' },
               { id: 'finanzas', icon: Wallet, label: 'Cierres & Caja' },
               { id: 'produccion', icon: PackageSearch, label: 'Costeos' },
@@ -654,7 +740,10 @@ export default function App() {
                     <div key={v.id} className={`min-w-[200px] sm:min-w-[240px] p-3 sm:p-4 rounded-xl border shrink-0 ${modoOscuro ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
                       <div className="flex justify-between items-start mb-2">
                         <span className="font-black text-lg sm:text-xl text-emerald-400">${formatMoney(v.total)}</span>
-                        <button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded"><Trash2 size={14}/></button>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", JSON.parse(v.detalle_ticket), v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 rounded" title="Descargar PDF"><Download size={14}/></button>
+                          <button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded"><Trash2 size={14}/></button>
+                        </div>
                       </div>
                       <p className={`text-[10px] sm:text-xs line-clamp-3 mb-2 ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>{v.detalle_ticket}</p>
                     </div>
@@ -1121,7 +1210,7 @@ export default function App() {
                         <th className="p-3 sm:p-4 font-bold">Detalle</th>
                         <th className="p-3 sm:p-4 font-bold">Pago</th>
                         <th className="p-3 sm:p-4 font-bold">Total</th>
-                        <th className="p-3 sm:p-4 font-bold text-center">X</th>
+                        <th className="p-3 sm:p-4 font-bold text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${modoOscuro ? 'divide-slate-800' : 'divide-slate-200'}`}>
@@ -1151,7 +1240,12 @@ export default function App() {
                               )}
                             </td>
                             <td className={`p-3 sm:p-4 font-black ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{formatMoney(v.total)}</td>
-                            <td className="p-3 sm:p-4 text-center"><button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 sm:p-2 rounded-lg"><Trash2 size={16}/></button></td>
+                            <td className="p-3 sm:p-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", JSON.parse(v.detalle_ticket), v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 sm:p-2 rounded-lg" title="Descargar PDF"><Download size={16}/></button>
+                                <button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 sm:p-2 rounded-lg" title="Anular Venta"><Trash2 size={16}/></button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}
@@ -1241,7 +1335,7 @@ export default function App() {
                     <div key={r.id} className={`border p-3 sm:p-4 rounded-2xl relative overflow-hidden ${modoOscuro ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
                       <div className={`absolute top-0 left-0 w-1.5 h-full ${ganancia > 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                       <span className={`font-black ml-2 text-sm sm:text-base ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{r.producto}</span>
-                      <span className="text-[10px] sm:text-xs font-bold text-slate-400 ml-1">({unids => unids} uni.)</span>
+                      <span className="text-[10px] sm:text-xs font-bold text-slate-400 ml-1">({unidades} uni.)</span>
                       <div className={`flex justify-between text-[10px] sm:text-xs font-bold p-1.5 sm:p-2 rounded-lg ml-2 mt-2 ${modoOscuro ? 'bg-slate-900 text-slate-300' : 'bg-white text-slate-600'}`}>
                         <span>Inv: <strong className="text-rose-500">${formatMoney(costoInvertido)}</strong></span>
                       </div>
@@ -1251,6 +1345,94 @@ export default function App() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- NUEVA VISTA DE PRESUPUESTOS 100% INDEPENDIENTE --- */}
+        {vistaActiva === 'presupuestos' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in relative">
+            
+            {/* Catálogo para Presupuestar */}
+            <div className="lg:col-span-2 flex flex-col h-[calc(100vh-100px)]">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className={`text-xl font-black flex items-center gap-2 ${modoOscuro ? 'text-white' : 'text-slate-800'}`}><FileText /> Armar Presupuesto</h2>
+                <div className="relative w-full sm:w-80">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><Search size={18}/></span>
+                  <input type="text" placeholder="Buscar repuesto..." value={busquedaPresupuesto} onChange={(e) => setBusquedaPresupuesto(e.target.value)} className={`w-full rounded-xl py-2 pl-10 pr-4 text-sm font-medium outline-none border focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 overflow-y-auto pr-2 pb-20">
+                {catalogo.filter(p => p.nombre.toLowerCase().includes(busquedaPresupuesto.toLowerCase()) || p.codigo_sku?.toLowerCase().includes(busquedaPresupuesto.toLowerCase())).slice(0, 20).map(prod => (
+                  <div key={prod.id} onClick={() => {
+                    const existe = carritoPresupuesto.find(item => item.id === prod.id);
+                    if(existe) {
+                      setCarritoPresupuesto(carritoPresupuesto.map(item => item.id === prod.id ? {...item, cantidad: item.cantidad + 1} : item));
+                    } else {
+                      setCarritoPresupuesto([...carritoPresupuesto, {...prod, cantidad: 1}]);
+                    }
+                  }} className={`border rounded-xl p-2.5 sm:p-3 shadow-sm flex flex-col group cursor-pointer transition-all hover:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                    <span className="text-[10px] font-mono text-slate-400 mb-1">{prod.codigo_sku || 'S/N'}</span>
+                    <h3 className={`font-bold text-xs sm:text-sm line-clamp-2 mb-2 ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{prod.nombre}</h3>
+                    <span className="font-black text-indigo-400 mt-auto">${formatMoney(prod.precio_venta)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Panel del Presupuesto */}
+            <div className={`border rounded-2xl p-4 flex flex-col h-auto max-h-[60vh] lg:max-h-none lg:h-[calc(100vh-120px)] lg:sticky lg:top-24 overflow-hidden shadow-xl ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className={`p-3 sm:p-4 text-center border-b-2 border-indigo-600 ${modoOscuro ? 'bg-slate-900 text-white' : 'bg-indigo-50 text-indigo-900'}`}>
+                <h2 className="font-black tracking-widest uppercase text-base">Cotización</h2>
+              </div>
+              <div className="p-3">
+                <input type="text" placeholder="Nombre del Cliente..." value={clientePresupuesto} onChange={(e) => setClientePresupuesto(e.target.value)} className={`w-full border rounded-lg p-2.5 mb-2 text-sm outline-none focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} />
+                <input type="text" placeholder="Observaciones..." value={notasPresupuesto} onChange={(e) => setNotasPresupuesto(e.target.value)} className={`w-full border rounded-lg p-2.5 text-sm outline-none focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} />
+              </div>
+
+              <div className={`flex-1 overflow-y-auto p-3 space-y-2 ${modoOscuro ? 'bg-slate-950' : 'bg-slate-50'}`}>
+                {carritoPresupuesto.length === 0 ? (
+                   <p className="text-center text-slate-500 mt-4 text-sm font-medium">Agregá productos para presupuestar</p>
+                ) : (
+                  carritoPresupuesto.map((item, idx) => (
+                    <div key={item.id} className={`flex justify-between items-center p-2 rounded-xl border ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                       <div className="flex-1 min-w-0 pr-2">
+                          <p className={`text-sm font-bold truncate ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{item.nombre}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button onClick={() => {
+                               const arr = [...carritoPresupuesto];
+                               if(arr[idx].cantidad > 1) arr[idx].cantidad -= 1;
+                               else arr.splice(idx, 1);
+                               setCarritoPresupuesto(arr);
+                            }} className={`px-2 py-0.5 rounded ${modoOscuro ? 'bg-slate-700' : 'bg-slate-200'}`}>-</button>
+                            <span className={`text-xs font-bold ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>{item.cantidad}</span>
+                            <button onClick={() => {
+                               const arr = [...carritoPresupuesto];
+                               arr[idx].cantidad += 1;
+                               setCarritoPresupuesto(arr);
+                            }} className={`px-2 py-0.5 rounded ${modoOscuro ? 'bg-slate-700' : 'bg-slate-200'}`}>+</button>
+                            <span className="text-xs text-slate-400 ml-2">${formatMoney(item.precio_venta)} c/u</span>
+                          </div>
+                       </div>
+                       <div className="flex flex-col items-end gap-1">
+                          <span className={`font-bold ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>${formatMoney(item.precio_venta * item.cantidad)}</span>
+                          <button onClick={() => setCarritoPresupuesto(carritoPresupuesto.filter((_, i) => i !== idx))} className="text-rose-500 text-xs font-bold hover:underline">Quitar</button>
+                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className={`p-4 border-t ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                <div className="flex justify-between items-end mb-4">
+                  <span className={`font-bold uppercase text-xs ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Total a cotizar</span>
+                  <span className="text-2xl font-black text-indigo-500">${formatMoney(carritoPresupuesto.reduce((a, b) => a + (b.precio_venta * b.cantidad), 0))}</span>
+                </div>
+                <button onClick={guardarYDescargarPresupuesto} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl uppercase tracking-widest flex justify-center items-center gap-2 text-sm shadow-md transition-all">
+                  <Download size={18} /> Descargar PDF
+                </button>
               </div>
             </div>
           </div>
