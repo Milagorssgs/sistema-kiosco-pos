@@ -90,77 +90,102 @@ export default function App() {
     setIsLogueado(false);
   };
 
-  // --- GENERADORES DE PDF ---
-  const generarPDF = (titulo, numeroDoc, cliente, items, total, notas = "") => {
-    const doc = new jsPDF();
+// --- GENERADORES DE PDF (BLINDADOS) ---
+  const generarPDF = (titulo, numeroDoc, cliente, itemsRaw, total, notas = "") => {
+    try {
+      const doc = new jsPDF();
 
-    // Cabecera del negocio
-    doc.setFontSize(22);
-    doc.setTextColor(79, 70, 229); // Color Indigo
-    doc.text("MOTOGEST", 14, 20);
+      // Cabecera del negocio
+      doc.setFontSize(22);
+      doc.setTextColor(79, 70, 229);
+      doc.text("MOTOGEST", 14, 20);
 
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text("Repuestos y Accesorios para Motos", 14, 26);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text("Repuestos y Accesorios para Motos", 14, 26);
 
-    // Info del Documento
-    doc.setFontSize(16);
-    doc.setTextColor(0);
-    doc.text(titulo, 130, 20);
-    doc.setFontSize(10);
-    doc.text(`Nº: ${String(numeroDoc).padStart(6, '0')}`, 130, 26);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 130, 32);
+      // Info del Documento
+      doc.setFontSize(16);
+      doc.setTextColor(0);
+      doc.text(titulo, 130, 20);
+      doc.setFontSize(10);
+      doc.text(`Nº: ${String(numeroDoc || '001').padStart(6, '0')}`, 130, 26);
+      doc.text(`Fecha: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`, 130, 32);
 
-    // Datos del Cliente
-    doc.setFontSize(11);
-    doc.text(`Cliente: ${cliente || 'Consumidor Final'}`, 14, 40);
-    if (notas) doc.text(`Observaciones: ${notas}`, 14, 46);
+      // Datos del Cliente
+      doc.setFontSize(11);
+      doc.text(`Cliente: ${cliente || 'Consumidor Final'}`, 14, 40);
+      if (notas) doc.text(`Observaciones: ${notas}`, 14, 46);
 
-    // Tabla de Productos
-    const tableColumn = ["Producto", "Cant.", "Precio Unit.", "Subtotal"];
-    const tableRows = items.map(item => [
-      item.nombre || item.producto,
-      item.cantidad,
-      `$${formatMoney(item.precio_venta || item.precioBase || item.precio)}`,
-      `$${formatMoney((item.precio_venta || item.precioBase || item.precio) * item.cantidad)}`
-    ]);
+      // Procesar items (compatible con Array de objetos o Texto Plano)
+      let tableRows = [];
+      if (Array.isArray(itemsRaw)) {
+        tableRows = itemsRaw.map(item => [
+          item.nombre || item.producto || "Repuesto",
+          item.cantidad || 1,
+          `$${formatMoney(item.precio_venta || item.precioBase || item.precio || 0)}`,
+          `$${formatMoney((item.precio_venta || item.precioBase || item.precio || 0) * (item.cantidad || 1))}`
+        ]);
+      } else if (typeof itemsRaw === 'string') {
+        tableRows = itemsRaw.split(' | ').map(str => {
+          const match = str.match(/([\d.]+)x (.*?) \((.*?)\)/);
+          if (match) {
+            return [match[2], match[1], "-", "-"];
+          }
+          return [str, "1", "-", "-"];
+        });
+      }
 
-    doc.autoTable({
-      startY: notas ? 52 : 46,
-      head: [tableColumn],
-      body: tableRows,
-      theme: 'striped',
-      headStyles: { fillColor: [79, 70, 229] },
-    });
+      const tableColumn = ["Producto / Detalle", "Cant.", "Precio Unit.", "Subtotal"];
 
-    // Total
-    const finalY = doc.lastAutoTable.finalY;
-    doc.setFontSize(14);
-    doc.text(`TOTAL: $${formatMoney(total)}`, 140, finalY + 10);
+      doc.autoTable({
+        startY: notas ? 52 : 46,
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [79, 70, 229] },
+      });
 
-    doc.save(`${titulo}_${numeroDoc}.pdf`);
+      // Total
+      const finalY = doc.lastAutoTable.finalY || 60;
+      doc.setFontSize(14);
+      doc.text(`TOTAL: $${formatMoney(total)}`, 140, finalY + 10);
+
+      doc.save(`${titulo.replace(/\s+/g, '_')}_${numeroDoc || 'DOC'}.pdf`);
+      toast.success("PDF descargado correctamente");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al renderizar el documento PDF");
+    }
   };
 
   const guardarYDescargarPresupuesto = async () => {
     if (carritoPresupuesto.length === 0) return toast.error("Agregá productos al presupuesto");
     const total = carritoPresupuesto.reduce((acc, item) => acc + (item.precio_venta * item.cantidad), 0);
+    const numRandom = Math.floor(1000 + Math.random() * 9000);
 
+    // 1. Descarga inmediata del PDF
+    generarPDF("PRESUPUESTO", numRandom, clientePresupuesto, carritoPresupuesto, total, notasPresupuesto);
+
+    // 2. Intento de persistencia en background sin bloquear
     try {
-      const res = await fetchAPI('presupuestos', 'POST', {
-        cliente: clientePresupuesto,
+      await fetchAPI('presupuestos', 'POST', {
+        cliente: clientePresupuesto || "Consumidor Final",
         total: total,
         detalle_ticket: JSON.stringify(carritoPresupuesto),
-        observaciones: notasPresupuesto
+        observaciones: notasPresupuesto || ""
       });
-      generarPDF("PRESUPUESTO", res.id, clientePresupuesto, carritoPresupuesto, total, notasPresupuesto);
-      toast.success("Presupuesto generado exitosamente");
-      setCarritoPresupuesto([]);
-      setClientePresupuesto('');
-      setNotasPresupuesto('');
     } catch (e) {
-      toast.error("Error al guardar presupuesto");
+      console.warn("No se pudo persistir en base de datos, PDF generado localmente.");
     }
+
+    setCarritoPresupuesto([]);
+    setClientePresupuesto('');
+    setNotasPresupuesto('');
   };
+
+
+
 
   // -------------------------
   const [vistaActiva, setVistaActiva] = useState('pos');
