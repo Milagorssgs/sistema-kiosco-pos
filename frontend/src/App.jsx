@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { FileText, Download } from 'lucide-react'; // Agregamos íconos para el PDF
 import { useState, useEffect } from 'react';
 import { 
@@ -138,7 +138,7 @@ export default function App() {
 
       const tableColumn = ["Producto / Detalle", "Cant.", "Precio Unit.", "Subtotal"];
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: notas ? 52 : 46,
         head: [tableColumn],
         body: tableRows,
