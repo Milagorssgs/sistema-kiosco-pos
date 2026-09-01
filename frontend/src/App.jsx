@@ -766,7 +766,7 @@ export default function App() {
                       <div className="flex justify-between items-start mb-2">
                         <span className="font-black text-lg sm:text-xl text-emerald-400">${formatMoney(v.total)}</span>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", JSON.parse(v.detalle_ticket), v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 rounded" title="Descargar PDF"><Download size={14}/></button>
+                          <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", v.detalle_ticket, v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 rounded" title="Descargar PDF"><Download size={14}/></button>
                           <button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded"><Trash2 size={14}/></button>
                         </div>
                       </div>
