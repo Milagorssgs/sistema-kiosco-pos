@@ -268,13 +268,9 @@ def anular_venta(id: int, db: Session = Depends(get_db), usuario: DBUsuario = De
 
 @app.post("/api/productos")
 def crear_producto(producto: ProductoCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
-    ultimo_prod = db.query(DBProducto).order_by(DBProducto.id.desc()).first()
-    siguiente_seq = (ultimo_prod.id + 1) if ultimo_prod else 1
-    nuevo_sku = f"{siguiente_seq:04d}"
-
     nuevo_prod = DBProducto(
         local_id=usuario.local_id,
-        codigo_sku=nuevo_sku, nombre=producto.nombre, marca=producto.marca,
+        codigo_sku=producto.codigo_sku, nombre=producto.nombre, marca=producto.marca,
         modelos_compatibles=producto.modelos_compatibles, categoria=producto.categoria,
         ubicacion_deposito=producto.ubicacion_deposito, precio_costo=producto.precio_costo,
         precio_venta=producto.precio_venta, stock_actual=producto.stock_actual,
@@ -301,7 +297,7 @@ def borrar_producto(id: int, db: Session = Depends(get_db), usuario: DBUsuario =
 def actualizar_producto(id: int, producto: ProductoCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
     prod = db.query(DBProducto).filter(DBProducto.id == id, DBProducto.local_id == usuario.local_id).first()
     if not prod: raise HTTPException(status_code=404)
-    # El código SKU ahora es autogenerado y no debe modificarse manualmente
+    prod.codigo_sku = producto.codigo_sku
     prod.nombre = producto.nombre
     prod.marca = producto.marca
     prod.modelos_compatibles = producto.modelos_compatibles
