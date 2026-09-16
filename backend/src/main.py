@@ -268,10 +268,21 @@ def anular_venta(id: int, db: Session = Depends(get_db), usuario: DBUsuario = De
 
 @app.post("/api/productos")
 def crear_producto(producto: ProductoCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
-    ultimo_prod = db.query(DBProducto).order_by(DBProducto.id.desc()).first()
-    siguiente_seq = (ultimo_prod.id + 1) if ultimo_prod else 1
+    from sqlalchemy import func
+    
+    # 1. Obtener el SKU máximo actual en la base de datos de forma segura
+    max_sku_str = db.query(func.max(DBProducto.codigo_sku)).filter(
+        DBProducto.local_id == usuario.local_id
+    ).scalar()
+    
+    try:
+        siguiente_seq = (int(max_sku_str) + 1) if max_sku_str and max_sku_str.isdigit() else 1
+    except ValueError:
+        siguiente_seq = 1
+        
     nuevo_sku = f"{siguiente_seq:04d}"
 
+    # 2. Guardar el producto con su SKU definitivo
     nuevo_prod = DBProducto(
         local_id=usuario.local_id,
         codigo_sku=nuevo_sku, nombre=producto.nombre, marca=producto.marca,
@@ -282,7 +293,9 @@ def crear_producto(producto: ProductoCreate, db: Session = Depends(get_db), usua
     )
     db.add(nuevo_prod)
     db.commit()
-    return {"mensaje": "Producto creado"}
+    db.refresh(nuevo_prod)
+    
+    return {"mensaje": "Producto creado", "codigo_sku": nuevo_prod.codigo_sku}
 
 @app.get("/api/productos")
 def obtener_productos(db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
