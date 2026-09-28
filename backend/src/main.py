@@ -5,7 +5,12 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+import json
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+import sys
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
@@ -419,4 +424,4 @@ def crear_presupuesto(presupuesto: PresupuestoCreate, db: Session = Depends(get_
 
 @app.get("/api/presupuestos")
 def obtener_presupuestos(db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
-    return db.query(DBPresupuesto).filter(DBPresupuesto.local_id == usuario.local_id).order_by(DBPresupuesto.id.desc()).all()
+    return db.query(DBPresupuesto).filter(DBPresupuesto.local_id == usuario.local_id).order_by(DBPresupuesto.id.desc()).all()
