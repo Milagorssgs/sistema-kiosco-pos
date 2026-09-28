@@ -72,10 +72,6 @@ class DBVenta(Base):
     __tablename__ = "ventas"
     id = Column(Integer, primary_key=True, index=True)
     local_id = Column(Integer, default=1)
-    subtotal = Column(Float, nullable=True)
-    tipo_ajuste = Column(String, default="ninguno")
-    porcentaje_ajuste = Column(Float, default=0.0)
-    monto_ajuste = Column(Float, default=0.0)
     total = Column(Float, nullable=False)
     efectivo = Column(Float, default=0.0)
     transferencia = Column(Float, default=0.0)
@@ -154,10 +150,6 @@ class ItemVenta(BaseModel):
     cantidad: float
 
 class VentaCreate(BaseModel):
-    subtotal: float = 0.0
-    tipo_ajuste: str = "ninguno"
-    porcentaje_ajuste: float = 0.0
-    monto_ajuste: float = 0.0
     total: float
     efectivo: float
     transferencia: float
@@ -255,10 +247,6 @@ async def upload_imagen(file: UploadFile = File(...)):
 def registrar_venta(venta: VentaCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
     nueva_venta = DBVenta(
         local_id=usuario.local_id, # Se asigna al local del usuario logueado
-        subtotal=venta.subtotal,
-        tipo_ajuste=venta.tipo_ajuste,
-        porcentaje_ajuste=venta.porcentaje_ajuste,
-        monto_ajuste=venta.monto_ajuste,
         total=venta.total, efectivo=venta.efectivo, transferencia=venta.transferencia, 
         tarjeta=venta.tarjeta, detalle_ticket=venta.detalle_ticket
     )

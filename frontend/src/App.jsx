@@ -98,7 +98,7 @@ export default function App() {
   };
 
 // --- GENERADORES DE PDF (BLINDADOS) ---
-  const generarPDF = (titulo, numeroDoc, cliente, itemsRaw, total, notas = "", ajusteInfo = null) => {
+  const generarPDF = (titulo, numeroDoc, cliente, itemsRaw, total, notas = "") => {
     try {
       const doc = new jsPDF();
 
@@ -154,18 +154,7 @@ export default function App() {
       });
 
       // Total
-      let finalY = doc.lastAutoTable.finalY || 60;
-      
-      if (ajusteInfo && ajusteInfo.tipo && ajusteInfo.tipo !== 'ninguno') {
-        doc.setFontSize(12);
-        doc.text(`Subtotal: $${formatMoney(ajusteInfo.subtotal)}`, 140, finalY + 10);
-        const txtAjuste = ajusteInfo.tipo === 'descuento' 
-          ? `Descuento ${ajusteInfo.porcentaje}%: -$${formatMoney(ajusteInfo.monto)}` 
-          : `Aumento ${ajusteInfo.porcentaje}%: +$${formatMoney(ajusteInfo.monto)}`;
-        doc.text(txtAjuste, 140, finalY + 16);
-        finalY += 12;
-      }
-      
+      const finalY = doc.lastAutoTable.finalY || 60;
       doc.setFontSize(14);
       doc.text(`TOTAL: $${formatMoney(total)}`, 140, finalY + 10);
 
@@ -420,13 +409,10 @@ export default function App() {
       return { nombre, unidad, cantidad: parseFloat(item[1].toFixed(2)) };
     });
 
-  const [ajustePOS, setAjustePOS] = useState({ tipo: 'ninguno', porcentaje: '' });
-  const subtotalCarrito = carrito.reduce((sum, item) => sum + ((parseFloat(item.cantidad) || 0) * (parseFloat(item.precioBase) || 0)), 0); 
-  const porcentajeNumerico = parseFloat(ajustePOS.porcentaje) || 0;
-  const montoAjusteCarrito = ajustePOS.tipo === 'ninguno' ? 0 : (subtotalCarrito * porcentajeNumerico / 100);
-  const totalCarrito = ajustePOS.tipo === 'descuento' 
-    ? Math.max(0, subtotalCarrito - montoAjusteCarrito) 
-    : subtotalCarrito + montoAjusteCarrito;
+  const [descuentoGlobal, setDescuentoGlobal] = useState('');
+  const subtotalCarrito = carrito.reduce((sum, item) => sum + ((parseFloat(item.cantidad) || 0) * (parseFloat(item.precioBase) || 0)), 0);
+  const descuentoNum = parseFloat(String(descuentoGlobal).replace(',', '.')) || 0;
+  const totalCarrito = Math.max(0, subtotalCarrito - descuentoNum);
   const vueltoEfectivo = (parseFloat(pagaCon) || 0) - totalCarrito;
 
   const agregarAlCarrito = (prod) => {
@@ -490,22 +476,21 @@ export default function App() {
     if (metodo === 'Transferencia') transferencia = totalCarrito;
     if (metodo === 'Tarjeta') tarjeta = totalCarrito;
 
-    const detalle = carrito.map(i => `${parseFloat(i.cantidad) || 0}x ${i.nombre} (${i.unidad})`).join(' | ');
+    let detalle = carrito.map(i => `${parseFloat(i.cantidad) || 0}x ${i.nombre} (${i.unidad})`).join(' | ');
+    if (descuentoNum > 0) {
+      detalle += ` | Descuento manual: -$${formatMoney(descuentoNum)}`;
+    }
     const itemsVenta = carrito.filter(i => i.unidad !== 'Libre').map(i => ({ id: i.idUnico, cantidad: parseFloat(i.cantidad) || 1 }));
 
     try {
       await fetchAPI('ventas', 'POST', { 
-        subtotal: subtotalCarrito,
-        tipo_ajuste: ajustePOS.tipo,
-        porcentaje_ajuste: parseFloat(ajustePOS.porcentaje) || 0,
-        monto_ajuste: montoAjusteCarrito,
         total: totalCarrito, 
         efectivo, transferencia, tarjeta, detalle_ticket: detalle, items: itemsVenta 
       });
       playAudio('success'); 
       toast.success("¡Cobro Exitoso y stock descontado!");
       setCarrito([]); setModalMixto(false); setModalEfectivo(false); setMontoEfMixto(''); setMontoTrMixto(''); setMontoTjMixto(''); setPagaCon('');
-      setAjustePOS({ tipo: 'ninguno', porcentaje: '' });
+      setDescuentoGlobal('');
       cargarDatos();
     } catch (e) { playAudio('error'); toast.error("Error al registrar venta"); }
   };
@@ -694,7 +679,7 @@ export default function App() {
             renderEtiquetas={renderEtiquetas} formatMoney={formatMoney}
             historialVentas={historialVentas} generarPDF={generarPDF}
             anularVenta={anularVenta} carrito={carrito} setCarrito={setCarrito}
-            subtotalCarrito={subtotalCarrito} ajustePOS={ajustePOS} setAjustePOS={setAjustePOS} montoAjusteCarrito={montoAjusteCarrito}
+            subtotalCarrito={subtotalCarrito} descuentoGlobal={descuentoGlobal} setDescuentoGlobal={setDescuentoGlobal}
             totalCarrito={totalCarrito} modalEfectivo={modalEfectivo}
             setModalEfectivo={setModalEfectivo} pagaCon={pagaCon}
             setPagaCon={setPagaCon} vueltoEfectivo={vueltoEfectivo} cobrar={cobrar}
