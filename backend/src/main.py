@@ -4,7 +4,10 @@ from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 import json
-
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+import sys
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
@@ -238,3 +241,26 @@ def obtener_alertas(db: Session = Depends(get_db)):
             })
             
     return alertas
+
+# 1. El detector inteligente de rutas
+def resolver_ruta():
+    """Ayuda a Python a encontrar la carpeta cuando está convertido en .exe"""
+    if getattr(sys, 'frozen', False):
+        # Si es el .exe, busca adentro de la carpeta interna
+        return sys._MEIPASS
+    # Si estás programando normal, busca en la carpeta actual
+    return os.getcwd()
+
+# 2. Armamos las rutas absolutas seguras
+RUTA_DIST = os.path.join(resolver_ruta(), "frontend_build")
+RUTA_ASSETS = os.path.join(RUTA_DIST, "assets")
+
+# 3. Servimos los archivos usando las nuevas rutas
+app.mount("/assets", StaticFiles(directory=RUTA_ASSETS), name="assets")
+
+@app.get("/{full_path:path}")
+async def serve_react(full_path: str):
+    file_path = os.path.join(RUTA_DIST, full_path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return FileResponse(file_path)
+    return FileResponse(os.path.join(RUTA_DIST, "index.html"))
