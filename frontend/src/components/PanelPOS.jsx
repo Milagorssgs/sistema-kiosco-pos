@@ -7,7 +7,8 @@ export default function PanelPOS({
   modoOscuro, horaActual, busqueda, setBusqueda, agregarLibre,
   catalogoFiltradoPOS, paginaActual, setPaginaActual, agregarAlCarrito,
   renderEtiquetas, formatMoney, historialVentas, generarPDF, anularVenta,
-  carrito, setCarrito, totalCarrito, modalEfectivo, setModalEfectivo,
+  carrito, setCarrito, subtotalCarrito, ajustePOS, setAjustePOS, montoAjusteCarrito,
+  totalCarrito, modalEfectivo, setModalEfectivo,
   pagaCon, setPagaCon, vueltoEfectivo, cobrar, modalMixto, setModalMixto,
   montoEfMixto, setMontoEfMixto, montoTrMixto, setMontoTrMixto,
   montoTjMixto, setMontoTjMixto, playAudio, actualizarInputCantidad,
@@ -93,7 +94,7 @@ export default function PanelPOS({
                 <div className="flex justify-between items-start mb-2">
                   <span className="font-black text-lg sm:text-xl text-emerald-400">${formatMoney(v.total)}</span>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", v.detalle_ticket, v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 rounded" title="Descargar PDF"><Download size={14}/></button>
+                    <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", v.detalle_ticket, v.total, "", (v.tipo_ajuste && v.tipo_ajuste !== 'ninguno') ? { subtotal: v.subtotal, tipo: v.tipo_ajuste, porcentaje: v.porcentaje_ajuste, monto: v.monto_ajuste } : null)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 rounded" title="Descargar PDF"><Download size={14}/></button>
                     <button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 rounded"><Trash2 size={14}/></button>
                   </div>
                 </div>
@@ -178,8 +179,54 @@ export default function PanelPOS({
         </div>
 
         <div className={`p-3 sm:p-4 border-t ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+          {/* Ajuste de Precio */}
+          <div className={`mb-3 p-3 rounded-lg border ${modoOscuro ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex flex-wrap gap-2 items-center justify-between">
+              <span className={`text-xs font-bold uppercase ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Ajuste:</span>
+              <div className="flex gap-2 items-center">
+                <select 
+                  value={ajustePOS.tipo} 
+                  onChange={(e) => setAjustePOS({...ajustePOS, tipo: e.target.value})}
+                  className={`text-xs font-bold p-1.5 rounded outline-none border ${modoOscuro ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                >
+                  <option value="ninguno">Ninguno</option>
+                  <option value="descuento">Descuento ▼</option>
+                  <option value="aumento">Aumento ▲</option>
+                </select>
+                {ajustePOS.tipo !== 'ninguno' && (
+                  <div className="flex items-center gap-1">
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max={ajustePOS.tipo === 'descuento' ? "100" : ""}
+                      value={ajustePOS.porcentaje}
+                      onChange={(e) => {
+                        let val = parseFloat(e.target.value);
+                        if (ajustePOS.tipo === 'descuento' && val > 100) val = 100;
+                        if (val < 0) val = 0;
+                        setAjustePOS({...ajustePOS, porcentaje: isNaN(val) ? '' : val})
+                      }}
+                      className={`w-16 text-xs font-bold p-1.5 rounded outline-none border text-center ${modoOscuro ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-300'}`}
+                      placeholder="%"
+                    />
+                    <span className="text-xs font-bold">%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {ajustePOS.tipo !== 'ninguno' && montoAjusteCarrito > 0 && (
+              <div className={`mt-2 flex justify-between items-center text-xs sm:text-sm font-bold ${ajustePOS.tipo === 'descuento' ? 'text-rose-500' : 'text-emerald-500'}`}>
+                <span>{ajustePOS.tipo === 'descuento' ? 'Descuento aplicado:' : 'Aumento aplicado:'}</span>
+                <span>{ajustePOS.tipo === 'descuento' ? '-' : '+'}${formatMoney(montoAjusteCarrito)}</span>
+              </div>
+            )}
+          </div>
+
           <div className={`flex justify-between items-center mb-3 sm:mb-4 p-3 sm:p-4 rounded-xl border ${modoOscuro ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
-            <span className={`font-black uppercase tracking-widest text-xs sm:text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Total:</span>
+            <div className="flex flex-col">
+              <span className={`font-black uppercase tracking-widest text-xs sm:text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Total:</span>
+              {ajustePOS.tipo !== 'ninguno' && <span className={`text-[10px] line-through ${modoOscuro ? 'text-slate-500' : 'text-slate-400'}`}>Subtotal: ${formatMoney(subtotalCarrito)}</span>}
+            </div>
             <span className="text-3xl sm:text-4xl font-black text-emerald-400">${formatMoney(totalCarrito)}</span>
           </div>
           
