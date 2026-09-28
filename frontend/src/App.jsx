@@ -410,10 +410,18 @@ export default function App() {
     });
 
   const [descuentoGlobal, setDescuentoGlobal] = useState('');
-  const subtotalCarrito = carrito.reduce((sum, item) => sum + ((parseFloat(item.cantidad) || 0) * (parseFloat(item.precioBase) || 0)), 0);
+  const [recargoGlobal, setRecargoGlobal] = useState('');
+  const subtotalCarrito = carrito.reduce((sum, item) => sum + ((parseFloat(item.cantidad) || 0) * (parseFloat(item.precioFinal) || 0)), 0);
   const descuentoNum = parseFloat(String(descuentoGlobal).replace(',', '.')) || 0;
-  const totalCarrito = Math.max(0, subtotalCarrito - descuentoNum);
+  const recargoNum = parseFloat(String(recargoGlobal).replace(',', '.')) || 0;
+  const totalCarrito = Math.max(0, subtotalCarrito - descuentoNum + recargoNum);
   const vueltoEfectivo = (parseFloat(pagaCon) || 0) - totalCarrito;
+
+  const actualizarPrecioItem = (idx, nuevoPrecio) => {
+    const n = [...carrito];
+    n[idx].precioFinal = String(nuevoPrecio).replace(',', '.');
+    setCarrito(n);
+  };
 
   const agregarAlCarrito = (prod) => {
     if (prod.stock_actual <= 0) {
@@ -435,7 +443,7 @@ export default function App() {
         nuevo[existeIdx].cantidad = (parseFloat(nuevo[existeIdx].cantidad) || 0) + 1;
         return nuevo;
       }
-      return [...prev, { idUnico, nombre: prod.nombre, marca: prod.marca, modelos_compatibles: prod.modelos_compatibles, unidad: 'Unidad', precioBase: precioVentaNum, cantidad: 1, stockMax: prod.stock_actual }];
+      return [...prev, { idUnico, nombre: prod.nombre, marca: prod.marca, modelos_compatibles: prod.modelos_compatibles, unidad: 'Unidad', precioBase: precioVentaNum, precioFinal: precioVentaNum, cantidad: 1, stockMax: prod.stock_actual }];
     });
   };
 
@@ -476,10 +484,10 @@ export default function App() {
     if (metodo === 'Transferencia') transferencia = totalCarrito;
     if (metodo === 'Tarjeta') tarjeta = totalCarrito;
 
-    let detalle = carrito.map(i => `${parseFloat(i.cantidad) || 0}x ${i.nombre} (${i.unidad})`).join(' | ');
-    if (descuentoNum > 0) {
-      detalle += ` | Descuento manual: -$${formatMoney(descuentoNum)}`;
-    }
+    let detalle = carrito.map(i => `${parseFloat(i.cantidad) || 0}x ${i.nombre} a $${formatMoney(i.precioFinal)} (${i.unidad})`).join(' | ');
+    if (descuentoNum > 0) detalle += ` | Desc. global: -$${formatMoney(descuentoNum)}`;
+    if (recargoNum > 0) detalle += ` | Recargo global: +$${formatMoney(recargoNum)}`;
+    
     const itemsVenta = carrito.filter(i => i.unidad !== 'Libre').map(i => ({ id: i.idUnico, cantidad: parseFloat(i.cantidad) || 1 }));
 
     try {
@@ -491,6 +499,7 @@ export default function App() {
       toast.success("¡Cobro Exitoso y stock descontado!");
       setCarrito([]); setModalMixto(false); setModalEfectivo(false); setMontoEfMixto(''); setMontoTrMixto(''); setMontoTjMixto(''); setPagaCon('');
       setDescuentoGlobal('');
+      setRecargoGlobal('');
       cargarDatos();
     } catch (e) { playAudio('error'); toast.error("Error al registrar venta"); }
   };
@@ -680,6 +689,7 @@ export default function App() {
             historialVentas={historialVentas} generarPDF={generarPDF}
             anularVenta={anularVenta} carrito={carrito} setCarrito={setCarrito}
             subtotalCarrito={subtotalCarrito} descuentoGlobal={descuentoGlobal} setDescuentoGlobal={setDescuentoGlobal}
+            recargoGlobal={recargoGlobal} setRecargoGlobal={setRecargoGlobal}
             totalCarrito={totalCarrito} modalEfectivo={modalEfectivo}
             setModalEfectivo={setModalEfectivo} pagaCon={pagaCon}
             setPagaCon={setPagaCon} vueltoEfectivo={vueltoEfectivo} cobrar={cobrar}
@@ -689,6 +699,7 @@ export default function App() {
             montoTjMixto={montoTjMixto} setMontoTjMixto={setMontoTjMixto}
             playAudio={playAudio} actualizarInputCantidad={actualizarInputCantidad}
             procesarCantidadBlur={procesarCantidadBlur} toast={toast}
+            actualizarPrecioItem={actualizarPrecioItem}
           />
         )}
 
