@@ -343,9 +343,10 @@ def registrar_egreso(egreso: EgresoCreate, db: Session = Depends(get_db), usuari
 @app.get("/api/finanzas")
 def obtener_finanzas(filtro: str = "dia", db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
     hoy = datetime.now()
-    if filtro == "semana": fecha_inicio = hoy - timedelta(days=hoy.weekday())
-    elif filtro == "mes": fecha_inicio = hoy.replace(day=1)
-    else: fecha_inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
+    hoy_inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
+    if filtro == "semana": fecha_inicio = hoy_inicio - timedelta(days=hoy_inicio.weekday())
+    elif filtro == "mes": fecha_inicio = hoy_inicio.replace(day=1)
+    else: fecha_inicio = hoy_inicio
 
     ventas = db.query(DBVenta).filter(DBVenta.fecha >= fecha_inicio, DBVenta.local_id == usuario.local_id).all()
     egresos = db.query(DBEgreso).filter(DBEgreso.fecha >= fecha_inicio, DBEgreso.local_id == usuario.local_id).order_by(DBEgreso.id.desc()).all()

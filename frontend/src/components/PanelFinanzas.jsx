@@ -167,7 +167,7 @@ export default function PanelFinanzas({
                       <td className={`p-3 sm:p-4 font-black ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>{formatMoney(v.total)}</td>
                       <td className="p-3 sm:p-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", JSON.parse(v.detalle_ticket), v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 sm:p-2 rounded-lg" title="Descargar PDF"><Download size={16}/></button>
+                          <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", v.detalle_ticket, v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 sm:p-2 rounded-lg" title="Descargar PDF"><Download size={16}/></button>
                           <button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 sm:p-2 rounded-lg" title="Anular Venta"><Trash2 size={16}/></button>
                         </div>
                       </td>
