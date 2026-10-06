@@ -341,15 +341,30 @@ def registrar_egreso(egreso: EgresoCreate, db: Session = Depends(get_db), usuari
     return nuevo
 
 @app.get("/api/finanzas")
-def obtener_finanzas(filtro: str = "dia", db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+def obtener_finanzas(filtro: str = "dia", inicio: str = None, fin: str = None, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
     hoy = datetime.now()
     hoy_inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
-    if filtro == "semana": fecha_inicio = hoy_inicio - timedelta(days=hoy_inicio.weekday())
-    elif filtro == "mes": fecha_inicio = hoy_inicio.replace(day=1)
-    else: fecha_inicio = hoy_inicio
+    
+    if filtro == "personalizado" and inicio and fin:
+        fecha_inicio = datetime.strptime(inicio, "%Y-%m-%d")
+        fecha_fin = datetime.strptime(fin, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+    else:
+        if filtro == "semana": fecha_inicio = hoy_inicio - timedelta(days=hoy_inicio.weekday())
+        elif filtro == "mes": fecha_inicio = hoy_inicio.replace(day=1)
+        else: fecha_inicio = hoy_inicio
+        fecha_fin = hoy.replace(year=hoy.year + 10)
 
-    ventas = db.query(DBVenta).filter(DBVenta.fecha >= fecha_inicio, DBVenta.local_id == usuario.local_id).all()
-    egresos = db.query(DBEgreso).filter(DBEgreso.fecha >= fecha_inicio, DBEgreso.local_id == usuario.local_id).order_by(DBEgreso.id.desc()).all()
+    ventas = db.query(DBVenta).filter(
+        DBVenta.fecha >= fecha_inicio, 
+        DBVenta.fecha <= fecha_fin,
+        DBVenta.local_id == usuario.local_id
+    ).all()
+    
+    egresos = db.query(DBEgreso).filter(
+        DBEgreso.fecha >= fecha_inicio, 
+        DBEgreso.fecha <= fecha_fin,
+        DBEgreso.local_id == usuario.local_id
+    ).order_by(DBEgreso.id.desc()).all()
     
     total_efectivo = sum(v.efectivo for v in ventas)
     total_transferencia = sum(v.transferencia for v in ventas)

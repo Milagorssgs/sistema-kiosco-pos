@@ -2,6 +2,7 @@ import { FileSpreadsheet, Download, Trash2 } from 'lucide-react';
 
 export default function PanelFinanzas({
   modoOscuro, subVistaFinanzas, setSubVistaFinanzas, filtroTiempo, cargarFinanzas,
+  fechaInicio, setFechaInicio, fechaFin, setFechaFin,
   finanzas, formatMoney, totalHoy, totalSemana, totalMes, formEgreso, setFormEgreso,
   guardarEgreso, descargarBackupCSV, filtroHistorial, setFiltroHistorial,
   filtroMetodo, setFiltroMetodo, historialFiltrado, generarPDF, anularVenta
@@ -17,13 +18,26 @@ export default function PanelFinanzas({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-fade-in">
           <div className={`lg:col-span-2 p-4 sm:p-8 rounded-2xl shadow-xl border print:shadow-none print:border-none print:p-0 ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
             <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6 print:hidden border-b pb-4 ${modoOscuro ? 'border-slate-800' : 'border-slate-100'}`}>
-              <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-start">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 sm:gap-4 w-full lg:w-auto justify-between lg:justify-start">
                 <h3 className={`font-black text-lg sm:text-xl uppercase tracking-wide ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>Reporte de Caja</h3>
-                <select value={filtroTiempo} onChange={(e) => cargarFinanzas(e.target.value)} className={`border font-bold rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm outline-none focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
-                  <option value="dia">Día Actual</option>
-                  <option value="semana">Esta Semana</option>
-                  <option value="mes">Este Mes</option>
-                </select>
+                
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={filtroTiempo} onChange={(e) => cargarFinanzas(e.target.value, fechaInicio, fechaFin)} className={`border font-bold rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm outline-none focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>
+                    <option value="dia">Día Actual</option>
+                    <option value="semana">Esta Semana</option>
+                    <option value="mes">Este Mes</option>
+                    <option value="personalizado">Fechas Personalizadas</option>
+                  </select>
+
+                  {filtroTiempo === 'personalizado' && (
+                    <div className="flex items-center gap-2">
+                      <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className={`border rounded-lg px-2 py-1.5 text-xs sm:text-sm outline-none ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'}`} />
+                      <span className={modoOscuro ? 'text-slate-400' : 'text-slate-500'}>a</span>
+                      <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} className={`border rounded-lg px-2 py-1.5 text-xs sm:text-sm outline-none ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200'}`} />
+                      <button onClick={() => cargarFinanzas('personalizado', fechaInicio, fechaFin)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold shadow-md transition-colors">Buscar</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             

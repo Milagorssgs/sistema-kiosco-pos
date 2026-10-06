@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 
 export default function PanelCatalogo({
-  modoOscuro, catForm, setCatForm, subiendoFoto, productoEditando,
+  rolUsuario, modoOscuro, catForm, setCatForm, subiendoFoto, productoEditando,
   abrirBuscadorGoogle, manejarPegadoImagen, manejarSeleccionArchivo,
   cancelarEdicion, guardarProducto, catalogo, busquedaCatalogo,
   setBusquedaCatalogo, catalogoFiltradoABM, paginaActual, setPaginaActual,
@@ -150,8 +150,14 @@ export default function PanelCatalogo({
             <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto border-t sm:border-0 pt-2 sm:pt-0 border-slate-200/50">
               <p className={`font-black text-base sm:text-lg px-2 py-1 rounded-lg border shadow-sm ${modoOscuro ? 'bg-slate-900 border-slate-700 text-indigo-400' : 'bg-white border-slate-100 text-indigo-600'}`}>${formatMoney(prod.precio_venta)}</p>
               <div className="flex gap-1 mt-0 sm:mt-2">
-                <button onClick={() => cargarParaEditar(prod)} className={`p-1.5 shadow-sm rounded-md ${modoOscuro ? 'bg-slate-900 text-indigo-400 hover:bg-slate-700' : 'bg-white text-blue-500'}`}><Pencil size={16}/></button>
-                <button onClick={() => borrarProducto(prod.id)} className={`p-1.5 shadow-sm rounded-md ${modoOscuro ? 'bg-slate-900 text-rose-400 hover:bg-slate-700' : 'bg-white text-rose-400'}`}><Trash2 size={16}/></button>
+                {rolUsuario === 'admin' ? (
+                  <>
+                    <button onClick={() => cargarParaEditar(prod)} className={`p-1.5 shadow-sm rounded-md ${modoOscuro ? 'bg-slate-900 text-indigo-400 hover:bg-slate-700' : 'bg-white text-blue-500'}`}><Pencil size={16}/></button>
+                    <button onClick={() => borrarProducto(prod.id)} className={`p-1.5 shadow-sm rounded-md ${modoOscuro ? 'bg-slate-900 text-rose-400 hover:bg-slate-700' : 'bg-white text-rose-400'}`}><Trash2 size={16}/></button>
+                  </>
+                ) : (
+                  <span className="text-[10px] text-slate-400 font-bold uppercase mt-1">Solo lectura</span>
+                )}
               </div>
             </div>
           </div>

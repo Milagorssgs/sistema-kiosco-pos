@@ -48,7 +48,11 @@ export default function App() {
   const [busquedaPresupuesto, setBusquedaPresupuesto] = useState('');
   
   // --- SEGURIDAD Y LOGIN ---
-  const [isLogueado, setIsLogueado] = useState(localStorage.getItem('auth_motogest') === 'true');
+  const [isLogueado, setIsLogueado] = useState(!!localStorage.getItem('motogest_token'));
+  const [rolUsuario, setRolUsuario] = useState(localStorage.getItem('rol_motogest') || 'empleado');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
+
   const [claveInput, setClaveInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const CLAVE_SECRETA = "moto2026"; // Acá podés escribir la contraseña que quieras
@@ -84,6 +88,12 @@ export default function App() {
 
       const data = await res.json();
       localStorage.setItem('motogest_token', data.access_token); 
+      
+      // Lógica de roles
+      const rolAsignado = emailInput === 'admin@motogest.com' ? 'admin' : 'empleado';
+      localStorage.setItem('rol_motogest', rolAsignado);
+      setRolUsuario(rolAsignado);
+
       setIsLogueado(true);
       toast.success("¡Bienvenido a MotoGest!");
       cargarDatos();
@@ -93,8 +103,12 @@ export default function App() {
   };
 
   const cerrarSesion = () => {
-    localStorage.removeItem('auth_motogest');
+    localStorage.removeItem('motogest_token');
+    localStorage.removeItem('rol_motogest');
+    setRolUsuario('empleado');
     setIsLogueado(false);
+    setVistaActiva('pos');
+    setCarrito([]);
   };
 
 // --- GENERADORES DE PDF (BLINDADOS) ---
@@ -269,10 +283,10 @@ export default function App() {
     }
   };
 
-  const cargarFinanzas = async (filtro) => {
+  const cargarFinanzas = async (filtro = 'dia', fInicio = '', fFin = '') => {
     try { 
       setFiltroTiempo(filtro); 
-      setFinanzas(await fetchAPI(`finanzas?filtro=${filtro}`)); 
+      setFinanzas(await fetchAPI(`finanzas?filtro=${filtro}&inicio=${fInicio}&fin=${fFin}`)); 
     } catch (e) {}
   };
 
@@ -628,8 +642,10 @@ export default function App() {
               { id: 'pos', icon: Store, label: 'Caja' },
               { id: 'presupuestos', icon: FileText, label: 'Presupuestos' },
               { id: 'catalogo', icon: Wrench, label: 'Catálogo' },
-              { id: 'finanzas', icon: Wallet, label: 'Cierres & Caja' },
-              { id: 'produccion', icon: PackageSearch, label: 'Costeos' },
+              ...(rolUsuario === 'admin' ? [
+                { id: 'finanzas', icon: Wallet, label: 'Cierres & Caja' },
+                { id: 'produccion', icon: PackageSearch, label: 'Costeos' }
+              ] : [])
             ].map(btn => (
               <button key={btn.id} onClick={() => {playAudio('click'); setVistaActiva(btn.id)}} className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap shrink-0 text-xs sm:text-base ${vistaActiva === btn.id ? 'bg-indigo-600 text-white shadow-md scale-105' : 'hover:bg-slate-800 text-slate-300'}`}>
                 <btn.icon size={18} className="hidden sm:block" /> {btn.label}
@@ -705,7 +721,7 @@ export default function App() {
 
         {vistaActiva === 'catalogo' && (
           <PanelCatalogo
-            modoOscuro={modoOscuro} catForm={catForm} setCatForm={setCatForm}
+            rolUsuario={rolUsuario} modoOscuro={modoOscuro} catForm={catForm} setCatForm={setCatForm}
             subiendoFoto={subiendoFoto} productoEditando={productoEditando}
             abrirBuscadorGoogle={abrirBuscadorGoogle}
             manejarPegadoImagen={manejarPegadoImagen}
@@ -724,6 +740,8 @@ export default function App() {
           <PanelFinanzas
             modoOscuro={modoOscuro} subVistaFinanzas={subVistaFinanzas}
             setSubVistaFinanzas={setSubVistaFinanzas} filtroTiempo={filtroTiempo}
+            fechaInicio={fechaInicio} setFechaInicio={setFechaInicio}
+            fechaFin={fechaFin} setFechaFin={setFechaFin}
             cargarFinanzas={cargarFinanzas} finanzas={finanzas}
             formatMoney={formatMoney} totalHoy={totalHoy} totalSemana={totalSemana}
             totalMes={totalMes} formEgreso={formEgreso} setFormEgreso={setFormEgreso}
