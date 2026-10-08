@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 
 export default function PanelPOS({
-  modoOscuro, horaActual, busqueda, setBusqueda, agregarLibre,
+  rolUsuario, modoOscuro, horaActual, busqueda, setBusqueda, agregarLibre,
   catalogoFiltradoPOS, paginaActual, setPaginaActual, agregarAlCarrito,
   renderEtiquetas, formatMoney, historialVentas, generarPDF, anularVenta,
   carrito, setCarrito, subtotalCarrito, descuentoGlobal, setDescuentoGlobal,
@@ -206,10 +206,12 @@ export default function PanelPOS({
               <input type="text" inputMode="decimal" placeholder="0" value={descuentoGlobal} onChange={e => setDescuentoGlobal(e.target.value.replace(',', '.'))} className="w-20 sm:w-24 text-right font-black text-base text-rose-500 bg-transparent outline-none placeholder-rose-500/50" />
             </div>
 
-            <div className={`flex justify-between items-center px-3 sm:px-4 py-2 rounded-xl border border-dashed ${modoOscuro ? 'bg-amber-950/20 border-amber-900/50' : 'bg-amber-50 border-amber-200'}`}>
-              <span className={`font-bold text-xs sm:text-sm text-amber-500`}>Recargo (+$):</span>
-              <input type="text" inputMode="decimal" placeholder="0" value={recargoGlobal} onChange={e => setRecargoGlobal(e.target.value.replace(',', '.'))} className="w-20 sm:w-24 text-right font-black text-base text-amber-500 bg-transparent outline-none placeholder-amber-500/50" />
-            </div>
+            {rolUsuario === 'admin' && (
+              <div className={`flex justify-between items-center px-3 sm:px-4 py-2 rounded-xl border border-dashed ${modoOscuro ? 'bg-amber-950/20 border-amber-900/50' : 'bg-amber-50 border-amber-200'}`}>
+                <span className={`font-bold text-xs sm:text-sm text-amber-500`}>Recargo (+$):</span>
+                <input type="text" inputMode="decimal" placeholder="0" value={recargoGlobal} onChange={e => setRecargoGlobal(e.target.value.replace(',', '.'))} className="w-20 sm:w-24 text-right font-black text-base text-amber-500 bg-transparent outline-none placeholder-amber-500/50" />
+              </div>
+            )}
 
             <div className={`flex justify-between items-center p-3 sm:p-4 rounded-xl border shadow-sm ${modoOscuro ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
               <span className={`font-black uppercase tracking-widest text-xs sm:text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Total Final:</span>

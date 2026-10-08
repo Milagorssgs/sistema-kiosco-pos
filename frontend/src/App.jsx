@@ -433,7 +433,18 @@ export default function App() {
 
   const actualizarPrecioItem = (idx, nuevoPrecio) => {
     const n = [...carrito];
-    n[idx].precioFinal = String(nuevoPrecio).replace(',', '.');
+    let precio = String(nuevoPrecio).replace(',', '.');
+    
+    if (rolUsuario !== 'admin') {
+      const pNum = parseFloat(precio) || 0;
+      const baseNum = parseFloat(n[idx].precioBase) || 0;
+      if (pNum > baseNum) {
+        precio = baseNum.toString();
+        toast.error("Solo los administradores pueden aplicar aumentos de precio.");
+      }
+    }
+
+    n[idx].precioFinal = precio;
     setCarrito(n);
   };
 
@@ -466,7 +477,7 @@ export default function App() {
     if (!desc) return;
     const montoRaw = window.prompt("Monto a cobrar ($):");
     const monto = parseFloat(montoRaw.replace(',', '.'));
-    if (monto > 0) setCarrito([...carrito, { idUnico: Date.now(), nombre: desc, unidad: 'Libre', precioBase: monto, cantidad: 1 }]);
+    if (monto > 0) setCarrito([...carrito, { idUnico: Date.now(), nombre: desc, unidad: 'Libre', precioBase: monto, precioFinal: monto, cantidad: 1 }]);
   };
 
   const actualizarInputCantidad = (idx, valorBruto) => {
@@ -697,7 +708,7 @@ export default function App() {
         
         {vistaActiva === 'pos' && (
           <PanelPOS
-            modoOscuro={modoOscuro} horaActual={horaActual} busqueda={busqueda}
+            rolUsuario={rolUsuario} modoOscuro={modoOscuro} horaActual={horaActual} busqueda={busqueda}
             setBusqueda={setBusqueda} agregarLibre={agregarLibre}
             catalogoFiltradoPOS={catalogoFiltradoPOS} paginaActual={paginaActual}
             setPaginaActual={setPaginaActual} agregarAlCarrito={agregarAlCarrito}
