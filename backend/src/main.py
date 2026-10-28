@@ -209,7 +209,7 @@ def registrar_nuevo_cliente(cliente: NuevoCliente, db: Session = Depends(get_db)
         password_hash=pwd_context.hash(cliente.password),
         rol="admin"
     )
-    db.add(nuevo_usuario)
+    db.add(nuevo_usuario) 
     db.commit()
     
     return {
