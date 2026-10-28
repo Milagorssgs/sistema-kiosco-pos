@@ -19,7 +19,7 @@ class DBUsuario(Base):
 db = SessionLocal()
 usuario = db.query(DBUsuario).filter(DBUsuario.email == "admin@motogest.com").first()
 if usuario:
-    usuario.password_hash = pwd_context.hash("emi17")
+    usuario.password_hash = pwd_context.hash("gsellm.")
     db.commit()
     print("Contraseña actualizada con éxito.")
 else:
