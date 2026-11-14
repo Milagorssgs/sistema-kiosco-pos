@@ -77,6 +77,21 @@ class DBVenta(Base):
     transferencia = Column(Float, default=0.0)
     tarjeta = Column(Float, default=0.0)
     detalle_ticket = Column(String, nullable=False)
+    empleado = Column(String, default="Empleado 1")
+    items_json = Column(String, default="[]")
+    fecha = Column(DateTime, default=datetime.now)
+
+class DBReembolso(Base):
+    __tablename__ = "reembolsos"
+    id = Column(Integer, primary_key=True, index=True)
+    local_id = Column(Integer, default=1)
+    venta_id = Column(Integer, nullable=False, index=True)
+    producto_id = Column(Integer, nullable=False)
+    producto_nombre = Column(String, nullable=False)
+    cantidad = Column(Float, nullable=False)
+    monto_reembolsado = Column(Float, nullable=False)
+    empleado = Column(String, nullable=False)
+    motivo = Column(String, default="")
     fecha = Column(DateTime, default=datetime.now)
 
 class DBProducto(Base):
@@ -148,6 +163,15 @@ def get_usuario_actual(token: str = Depends(oauth2_scheme), db: Session = Depend
 class ItemVenta(BaseModel):
     id: int
     cantidad: float
+    nombre: Optional[str] = ""
+    precio_unitario: Optional[float] = 0.0
+
+class ReembolsoCreate(BaseModel):
+    venta_id: int
+    producto_id: int
+    cantidad: float
+    monto_reembolsado: float
+    motivo: Optional[str] = ""
 
 class VentaCreate(BaseModel):
     total: float
@@ -245,10 +269,13 @@ async def upload_imagen(file: UploadFile = File(...)):
 
 @app.post("/api/ventas")
 def registrar_venta(venta: VentaCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+    empleado_nombre = "Empleado 1" if usuario.email == "admin@motogest.com" else "Empleado 2"
     nueva_venta = DBVenta(
         local_id=usuario.local_id, # Se asigna al local del usuario logueado
         total=venta.total, efectivo=venta.efectivo, transferencia=venta.transferencia, 
-        tarjeta=venta.tarjeta, detalle_ticket=venta.detalle_ticket
+        tarjeta=venta.tarjeta, detalle_ticket=venta.detalle_ticket,
+        empleado=empleado_nombre,
+        items_json=json.dumps([item.dict() for item in venta.items])
     )
     db.add(nueva_venta)
     for item in venta.items:
@@ -257,6 +284,60 @@ def registrar_venta(venta: VentaCreate, db: Session = Depends(get_db), usuario: 
             prod.stock_actual = max(0, prod.stock_actual - int(item.cantidad))
     db.commit()
     return nueva_venta
+
+@app.post("/api/reembolsos")
+def registrar_reembolso(reembolso: ReembolsoCreate, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+    if reembolso.cantidad <= 0:
+        raise HTTPException(status_code=400, detail="La cantidad a devolver debe ser mayor a cero.")
+    venta = db.query(DBVenta).filter(DBVenta.id == reembolso.venta_id, DBVenta.local_id == usuario.local_id).first()
+    if not venta:
+        raise HTTPException(status_code=404, detail="Ticket de venta no encontrado.")
+    
+    items_venta = []
+    try:
+        items_venta = json.loads(venta.items_json or "[]")
+    except Exception:
+        items_venta = []
+    
+    item_vendido = next((i for i in items_venta if int(i.get("id", -1)) == reembolso.producto_id), None)
+    if not item_vendido:
+        raise HTTPException(status_code=400, detail="El producto seleccionado no pertenece a esta venta.")
+    
+    cantidad_vendida = float(item_vendido.get("cantidad", 0))
+    ya_devuelto = sum(
+        r.cantidad for r in db.query(DBReembolso).filter(
+            DBReembolso.venta_id == reembolso.venta_id,
+            DBReembolso.producto_id == reembolso.producto_id,
+            DBReembolso.local_id == usuario.local_id
+        ).all()
+    )
+    if ya_devuelto + reembolso.cantidad > cantidad_vendida:
+        raise HTTPException(status_code=400, detail=f"Cantidad inválida. Vendido: {cantidad_vendida}, ya devuelto: {ya_devuelto}.")
+    
+    prod = db.query(DBProducto).filter(DBProducto.id == reembolso.producto_id, DBProducto.local_id == usuario.local_id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="Producto no encontrado en el inventario.")
+    
+    prod.stock_actual = prod.stock_actual + int(reembolso.cantidad)
+    empleado_nombre = "Empleado 1" if usuario.email == "admin@motogest.com" else "Empleado 2"
+    nuevo_reembolso = DBReembolso(
+        local_id=usuario.local_id,
+        venta_id=reembolso.venta_id,
+        producto_id=reembolso.producto_id,
+        producto_nombre=prod.nombre,
+        cantidad=reembolso.cantidad,
+        monto_reembolsado=reembolso.monto_reembolsado,
+        empleado=empleado_nombre,
+        motivo=reembolso.motivo or ""
+    )
+    db.add(nuevo_reembolso)
+    db.commit()
+    db.refresh(nuevo_reembolso)
+    return nuevo_reembolso
+
+@app.get("/api/reembolsos")
+def obtener_reembolsos(db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
+    return db.query(DBReembolso).filter(DBReembolso.local_id == usuario.local_id).order_by(DBReembolso.id.desc()).all()
 
 @app.get("/api/ventas")
 def obtener_ventas(db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):

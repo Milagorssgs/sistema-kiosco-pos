@@ -50,6 +50,8 @@ export default function App() {
   // --- SEGURIDAD Y LOGIN ---
   const [isLogueado, setIsLogueado] = useState(!!localStorage.getItem('motogest_token'));
   const [rolUsuario, setRolUsuario] = useState(localStorage.getItem('rol_motogest') || 'empleado');
+  const [reembolsos, setReembolsos] = useState([]);
+  const [filtroEmpleado, setFiltroEmpleado] = useState('Todos');
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
 
@@ -270,6 +272,7 @@ export default function App() {
     try {
       setCatalogo(await fetchAPI('productos'));
       setHistorialVentas(await fetchAPI('ventas'));
+      setReembolsos(await fetchAPI('reembolsos'));
       setHistorialProd(await fetchAPI('rendimientos'));
       cargarFinanzas('dia');
       const alertasNuevas = await fetchAPI('alertas');
@@ -433,18 +436,7 @@ export default function App() {
 
   const actualizarPrecioItem = (idx, nuevoPrecio) => {
     const n = [...carrito];
-    let precio = String(nuevoPrecio).replace(',', '.');
-    
-    if (rolUsuario !== 'admin') {
-      const pNum = parseFloat(precio) || 0;
-      const baseNum = parseFloat(n[idx].precioBase) || 0;
-      if (pNum > baseNum) {
-        precio = baseNum.toString();
-        toast.error("Solo los administradores pueden aplicar aumentos de precio.");
-      }
-    }
-
-    n[idx].precioFinal = precio;
+    n[idx].precioFinal = String(nuevoPrecio).replace(',', '.');
     setCarrito(n);
   };
 
@@ -513,7 +505,7 @@ export default function App() {
     if (descuentoNum > 0) detalle += ` | Desc. global: -$${formatMoney(descuentoNum)}`;
     if (recargoNum > 0) detalle += ` | Recargo global: +$${formatMoney(recargoNum)}`;
     
-    const itemsVenta = carrito.filter(i => i.unidad !== 'Libre').map(i => ({ id: i.idUnico, cantidad: parseFloat(i.cantidad) || 1 }));
+    const itemsVenta = carrito.filter(i => i.unidad !== 'Libre').map(i => ({ id: i.idUnico, cantidad: parseFloat(i.cantidad) || 1, nombre: i.nombre, precio_unitario: parseFloat(i.precioFinal) || 0 }));
 
     try {
       await fetchAPI('ventas', 'POST', { 
@@ -592,15 +584,30 @@ export default function App() {
     toast.success("Excel descargado");
   };
 
+  const registrarReembolso = async (payload) => {
+    try {
+      await fetchAPI('reembolsos', 'POST', payload);
+      playAudio('success');
+      toast.success('Reembolso registrado y stock devuelto al inventario');
+      cargarDatos();
+      return true;
+    } catch (e) {
+      playAudio('error');
+      toast.error(e.message || 'Error al registrar reembolso');
+      return false;
+    }
+  };
+
   const historialFiltrado = historialVentas.filter(v => {
-    const coincideTexto = v.detalle_ticket.toLowerCase().includes(filtroHistorial.toLowerCase()) || v.total.toString().includes(filtroHistorial);
+    const coincideTexto = v.detalle_ticket.toLowerCase().includes(filtroHistorial.toLowerCase()) || v.total.toString().includes(filtroHistorial) || v.id.toString().includes(filtroHistorial);
     const cantPagos = (v.efectivo>0?1:0) + (v.transferencia>0?1:0) + ((v.tarjeta||0)>0?1:0);
     let metodoString = 'Efectivo';
     if (cantPagos > 1) metodoString = 'Mixto';
     else if (v.transferencia > 0) metodoString = 'Transferencia';
     else if ((v.tarjeta||0) > 0) metodoString = 'Tarjeta';
+    const coincideEmpleado = filtroEmpleado === 'Todos' || (v.empleado || 'Empleado 1') === filtroEmpleado;
     
-    return coincideTexto && (filtroMetodo === 'Todos' || metodoString === filtroMetodo);
+    return coincideTexto && (filtroMetodo === 'Todos' || metodoString === filtroMetodo) && coincideEmpleado;
   });
 
   const costoProduccionNum = parseFloat(String(prodForm.costo).replace(',','.')) || 0;
@@ -759,8 +766,10 @@ export default function App() {
             guardarEgreso={guardarEgreso} descargarBackupCSV={descargarBackupCSV}
             filtroHistorial={filtroHistorial} setFiltroHistorial={setFiltroHistorial}
             filtroMetodo={filtroMetodo} setFiltroMetodo={setFiltroMetodo}
+            filtroEmpleado={filtroEmpleado} setFiltroEmpleado={setFiltroEmpleado}
             historialFiltrado={historialFiltrado} generarPDF={generarPDF}
-            anularVenta={anularVenta}
+            anularVenta={anularVenta} reembolsos={reembolsos}
+            registrarReembolso={registrarReembolso}
           />
         )}
 

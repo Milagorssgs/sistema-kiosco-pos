@@ -1,12 +1,48 @@
-import { FileSpreadsheet, Download, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { FileSpreadsheet, Download, Trash2, RotateCcw, X } from 'lucide-react';
 
 export default function PanelFinanzas({
   modoOscuro, subVistaFinanzas, setSubVistaFinanzas, filtroTiempo, cargarFinanzas,
   fechaInicio, setFechaInicio, fechaFin, setFechaFin,
   finanzas, formatMoney, totalHoy, totalSemana, totalMes, formEgreso, setFormEgreso,
   guardarEgreso, descargarBackupCSV, filtroHistorial, setFiltroHistorial,
-  filtroMetodo, setFiltroMetodo, historialFiltrado, generarPDF, anularVenta
+  filtroMetodo, setFiltroMetodo, filtroEmpleado, setFiltroEmpleado,
+  historialFiltrado, generarPDF, anularVenta, reembolsos = [], registrarReembolso
 }) {
+  const [modalReembolso, setModalReembolso] = useState(null);
+  const [prodSeleccionado, setProdSeleccionado] = useState('');
+  const [cantDevolver, setCantDevolver] = useState('1');
+  const [motivoDevolucion, setMotivoDevolucion] = useState('');
+
+  const abrirModalReembolso = (venta) => {
+    let items = [];
+    try { items = JSON.parse(venta.items_json || '[]'); } catch (e) { items = []; }
+    setModalReembolso({ venta, items });
+    if (items.length > 0) {
+      setProdSeleccionado(String(items[0].id));
+    } else {
+      setProdSeleccionado('');
+    }
+    setCantDevolver('1');
+    setMotivoDevolucion('');
+  };
+
+  const confirmarReembolso = async (e) => {
+    e.preventDefault();
+    if (!modalReembolso || !prodSeleccionado) return;
+    const item = modalReembolso.items.find(i => String(i.id) === String(prodSeleccionado));
+    if (!item) return;
+    const cant = parseFloat(cantDevolver) || 0;
+    const monto = cant * (parseFloat(item.precio_unitario) || 0);
+    const ok = await registrarReembolso({
+      venta_id: modalReembolso.venta.id,
+      producto_id: parseInt(prodSeleccionado),
+      cantidad: cant,
+      monto_reembolsado: monto,
+      motivo: motivoDevolucion
+    });
+    if (ok) setModalReembolso(null);
+  };
   return (
     <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 animate-fade-in">
       <div className={`p-2 rounded-2xl shadow-sm border print:hidden flex flex-col sm:flex-row justify-center gap-2 ${modoOscuro ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
@@ -129,7 +165,7 @@ export default function PanelFinanzas({
             <button onClick={descargarBackupCSV} className="w-full sm:w-auto flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm sm:text-base font-bold shadow-md"><FileSpreadsheet size={16}/> Descargar Excel</button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:gap-6">
             <input type="text" placeholder="Buscar ticket o monto..." value={filtroHistorial} onChange={(e) => setFiltroHistorial(e.target.value)} className={`w-full rounded-xl py-2 sm:py-3 px-3 sm:px-4 text-sm sm:text-base font-medium outline-none border focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} />
             <select value={filtroMetodo} onChange={(e) => setFiltroMetodo(e.target.value)} className={`rounded-xl p-2 sm:p-3 text-sm sm:text-base font-medium outline-none border focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
               <option value="Todos">Todos los pagos</option>
@@ -137,6 +173,11 @@ export default function PanelFinanzas({
               <option value="Transferencia">Solo Transf.</option>
               <option value="Tarjeta">Solo Tarjeta</option>
               <option value="Mixto">Pagos Mixtos</option>
+            </select>
+            <select value={filtroEmpleado} onChange={(e) => setFiltroEmpleado(e.target.value)} className={`rounded-xl p-2 sm:p-3 text-sm sm:text-base font-medium outline-none border focus:border-indigo-500 ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+              <option value="Todos">Todos los empleados</option>
+              <option value="Empleado 1">Empleado 1</option>
+              <option value="Empleado 2">Empleado 2</option>
             </select>
           </div>
 
@@ -146,6 +187,7 @@ export default function PanelFinanzas({
                 <tr>
                   <th className="p-3 sm:p-4 font-bold">#</th>
                   <th className="p-3 sm:p-4 font-bold">Fecha / Hora</th>
+                  <th className="p-3 sm:p-4 font-bold">Empleado</th>
                   <th className="p-3 sm:p-4 font-bold">Detalle</th>
                   <th className="p-3 sm:p-4 font-bold">Pago</th>
                   <th className="p-3 sm:p-4 font-bold">Total</th>
@@ -167,6 +209,11 @@ export default function PanelFinanzas({
                     <tr key={v.id} className={`transition-colors ${modoOscuro ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
                       <td className="p-3 sm:p-4 font-black text-slate-400">{v.id}</td>
                       <td className={`p-3 sm:p-4 font-medium ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>{new Date(v.fecha).toLocaleDateString()} <span className="opacity-50">|</span> {new Date(v.fecha).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+                      <td className="p-3 sm:p-4">
+                        <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${(v.empleado || 'Empleado 1') === 'Empleado 1' ? 'bg-purple-500/20 text-purple-400' : 'bg-sky-500/20 text-sky-400'}`}>
+                          {v.empleado || 'Empleado 1'}
+                        </span>
+                      </td>
                       <td className="p-3 sm:p-4"><p className={`max-w-[150px] sm:max-w-[300px] truncate ${modoOscuro ? 'text-slate-200' : 'text-slate-700'}`} title={v.detalle_ticket}>{v.detalle_ticket}</p></td>
                       <td className="p-3 sm:p-4">
                         <span className={`px-2 py-1 rounded-md text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${colorBadge}`}>{textoBadge}</span>
@@ -182,6 +229,7 @@ export default function PanelFinanzas({
                       <td className="p-3 sm:p-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button onClick={() => generarPDF("COMPROBANTE DE VENTA", v.id, "Consumidor Final", v.detalle_ticket, v.total)} className="text-indigo-400 hover:bg-indigo-500/10 p-1.5 sm:p-2 rounded-lg" title="Descargar PDF"><Download size={16}/></button>
+                          <button onClick={() => abrirModalReembolso(v)} className="text-amber-400 hover:bg-amber-500/10 p-1.5 sm:p-2 rounded-lg" title="Registrar Reembolso / Devolución"><RotateCcw size={16}/></button>
                           <button onClick={() => anularVenta(v.id)} className="text-rose-400 hover:bg-rose-500/10 p-1.5 sm:p-2 rounded-lg" title="Anular Venta"><Trash2 size={16}/></button>
                         </div>
                       </td>
@@ -189,10 +237,84 @@ export default function PanelFinanzas({
                   );
                 })}
                 {historialFiltrado.length === 0 && (
-                  <tr><td colSpan="6" className="text-center p-6 sm:p-8 text-slate-400 italic">No hay tickets registrados.</td></tr>
+                  <tr><td colSpan="7" className="text-center p-6 sm:p-8 text-slate-400 italic">No hay tickets registrados.</td></tr>
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-8">
+            <h4 className={`font-black text-base sm:text-lg mb-3 ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>Historial de Reembolsos y Devoluciones</h4>
+            <div className={`overflow-x-auto rounded-xl border ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
+              <table className="w-full text-left text-xs sm:text-sm whitespace-nowrap">
+                <thead className="bg-slate-900 text-white">
+                  <tr>
+                    <th className="p-3 sm:p-4 font-bold">Ticket #</th>
+                    <th className="p-3 sm:p-4 font-bold">Fecha / Hora</th>
+                    <th className="p-3 sm:p-4 font-bold">Empleado</th>
+                    <th className="p-3 sm:p-4 font-bold">Producto</th>
+                    <th className="p-3 sm:p-4 font-bold">Cant.</th>
+                    <th className="p-3 sm:p-4 font-bold">Reembolsado</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${modoOscuro ? 'divide-slate-800' : 'divide-slate-200'}`}>
+                  {reembolsos.map(r => (
+                    <tr key={r.id} className={`transition-colors ${modoOscuro ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
+                      <td className="p-3 sm:p-4 font-black text-amber-400">#{r.venta_id}</td>
+                      <td className={`p-3 sm:p-4 font-medium ${modoOscuro ? 'text-slate-300' : 'text-slate-600'}`}>{new Date(r.fecha).toLocaleDateString()} <span className="opacity-50">|</span> {new Date(r.fecha).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+                      <td className="p-3 sm:p-4">
+                        <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${r.empleado === 'Empleado 1' ? 'bg-purple-500/20 text-purple-400' : 'bg-sky-500/20 text-sky-400'}`}>
+                          {r.empleado}
+                        </span>
+                      </td>
+                      <td className={`p-3 sm:p-4 font-bold ${modoOscuro ? 'text-slate-200' : 'text-slate-700'}`}>{r.producto_nombre}</td>
+                      <td className="p-3 sm:p-4 font-black text-emerald-400">+{r.cantidad}</td>
+                      <td className={`p-3 sm:p-4 font-black ${modoOscuro ? 'text-white' : 'text-slate-800'}`}>${formatMoney(r.monto_reembolsado)}</td>
+                    </tr>
+                  ))}
+                  {reembolsos.length === 0 && (
+                    <tr><td colSpan="6" className="text-center p-6 text-slate-400 italic">No hay reembolsos registrados.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalReembolso && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`w-full max-w-md rounded-2xl p-6 shadow-2xl border ${modoOscuro ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-black text-lg">Devolución — Ticket #{modalReembolso.venta.id}</h3>
+              <button onClick={() => setModalReembolso(null)} className="text-slate-400 hover:text-rose-500"><X size={20}/></button>
+            </div>
+            {modalReembolso.items.length === 0 ? (
+              <p className="text-sm text-amber-400 py-4">Este ticket es anterior al registro detallado de ítems y no posee productos vinculados para devolución automática.</p>
+            ) : (
+              <form onSubmit={confirmarReembolso} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Producto a devolver</label>
+                  <select value={prodSeleccionado} onChange={e => setProdSeleccionado(e.target.value)} className={`w-full rounded-xl p-3 text-sm font-bold border outline-none ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`}>
+                    {modalReembolso.items.map((item, idx) => (
+                      <option key={idx} value={item.id}>{item.nombre || `Producto #${item.id}`} (Vendidos: {item.cantidad})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Cantidad a devolver</label>
+                  <input type="number" min="1" step="1" value={cantDevolver} onChange={e => setCantDevolver(e.target.value)} className={`w-full rounded-xl p-3 text-sm font-bold border outline-none ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} required />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Motivo (opcional)</label>
+                  <input type="text" placeholder="Ej: Falla, cambio..." value={motivoDevolucion} onChange={e => setMotivoDevolucion(e.target.value)} className={`w-full rounded-xl p-3 text-sm font-medium border outline-none ${modoOscuro ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200'}`} />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setModalReembolso(null)} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-800">Cancelar</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl text-sm font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-md">Confirmar Devolución</button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
