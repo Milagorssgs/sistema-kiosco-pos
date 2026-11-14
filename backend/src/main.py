@@ -4,7 +4,11 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+TZ_ARG = timezone(timedelta(hours=-3))
+def ahora_argentina():
+    return datetime.now(TZ_ARG).replace(tzinfo=None)
 from typing import List, Optional, Dict, Any
 import json
 from fastapi.staticfiles import StaticFiles
@@ -58,7 +62,7 @@ class DBLocal(Base):
     __tablename__ = "locales"
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, nullable=False)
-    fecha_alta = Column(DateTime, default=datetime.now)
+    fecha_alta = Column(DateTime, default=ahora_argentina)
 
 class DBUsuario(Base):
     __tablename__ = "usuarios"
@@ -79,7 +83,7 @@ class DBVenta(Base):
     detalle_ticket = Column(String, nullable=False)
     empleado = Column(String, default="Empleado 1")
     items_json = Column(String, default="[]")
-    fecha = Column(DateTime, default=datetime.now)
+    fecha = Column(DateTime, default=ahora_argentina)
 
 class DBReembolso(Base):
     __tablename__ = "reembolsos"
@@ -92,7 +96,7 @@ class DBReembolso(Base):
     monto_reembolsado = Column(Float, nullable=False)
     empleado = Column(String, nullable=False)
     motivo = Column(String, default="")
-    fecha = Column(DateTime, default=datetime.now)
+    fecha = Column(DateTime, default=ahora_argentina)
 
 class DBProducto(Base):
     __tablename__ = "productos"
@@ -117,7 +121,7 @@ class DBEgreso(Base):
     monto = Column(Float, nullable=False)
     descripcion = Column(String, nullable=False)
     metodo = Column(String, default="Efectivo")
-    fecha = Column(DateTime, default=datetime.now)
+    fecha = Column(DateTime, default=ahora_argentina)
 
 class DBRendimiento(Base):
     __tablename__ = "rendimientos"
@@ -127,7 +131,7 @@ class DBRendimiento(Base):
     costo_produccion = Column(Float, nullable=False)
     precio_venta_estimado = Column(Float, nullable=False)
     cantidad_producida = Column(Integer, nullable=False)
-    fecha = Column(DateTime, default=datetime.now)
+    fecha = Column(DateTime, default=ahora_argentina)
 
 class DBPresupuesto(Base):
     __tablename__ = "presupuestos"
@@ -137,7 +141,7 @@ class DBPresupuesto(Base):
     total = Column(Float, nullable=False)
     detalle_ticket = Column(String, nullable=False) # Guardaremos los items acá
     observaciones = Column(String, default="")
-    fecha = Column(DateTime, default=datetime.now)
+    fecha = Column(DateTime, default=ahora_argentina)
 
 Base.metadata.create_all(bind=engine)
 
@@ -423,7 +427,7 @@ def registrar_egreso(egreso: EgresoCreate, db: Session = Depends(get_db), usuari
 
 @app.get("/api/finanzas")
 def obtener_finanzas(filtro: str = "dia", inicio: str = None, fin: str = None, db: Session = Depends(get_db), usuario: DBUsuario = Depends(get_usuario_actual)):
-    hoy = datetime.now()
+    hoy = ahora_argentina()
     hoy_inicio = hoy.replace(hour=0, minute=0, second=0, microsecond=0)
     
     if filtro == "personalizado" and inicio and fin:
