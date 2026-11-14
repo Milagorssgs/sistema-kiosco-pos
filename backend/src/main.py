@@ -451,6 +451,8 @@ def obtener_finanzas(filtro: str = "dia", inicio: str = None, fin: str = None, d
     total_transferencia = sum(v.transferencia for v in ventas)
     total_tarjeta = sum(v.tarjeta for v in ventas)
     total_ingresos = sum(v.total for v in ventas)
+    total_empleado_1 = sum(v.total for v in ventas if (v.empleado or "Empleado 1") == "Empleado 1")
+    total_empleado_2 = sum(v.total for v in ventas if v.empleado == "Empleado 2")
     
     egresos_efectivo = sum(e.monto for e in egresos if e.metodo == 'Efectivo')
     egresos_transferencia = sum(e.monto for e in egresos if e.metodo == 'Transferencia')
@@ -461,6 +463,7 @@ def obtener_finanzas(filtro: str = "dia", inicio: str = None, fin: str = None, d
         "ingresos": {"efectivo": total_efectivo, "transferencia": total_transferencia, "tarjeta": total_tarjeta, "total": total_ingresos},
         "egresos": {"efectivo": egresos_efectivo, "transferencia": egresos_transferencia, "tarjeta": egresos_tarjeta, "total": total_egresos},
         "balance_neto": total_ingresos - total_egresos,
+        "ventas_por_empleado": {"empleado_1": total_empleado_1, "empleado_2": total_empleado_2},
         "lista_egresos": [{"id": e.id, "desc": e.descripcion, "monto": e.monto, "metodo": e.metodo, "fecha": e.fecha} for e in egresos]
     }
 

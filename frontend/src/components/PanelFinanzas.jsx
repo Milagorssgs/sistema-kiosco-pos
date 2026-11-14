@@ -102,6 +102,17 @@ export default function PanelFinanzas({
               <h3 className="text-4xl sm:text-5xl font-black">${formatMoney(finanzas.balance_neto)}</h3>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className={`p-4 rounded-2xl border ${modoOscuro ? 'bg-purple-950/20 border-purple-900' : 'bg-purple-50 border-purple-100'}`}>
+                <p className="text-purple-500 font-bold mb-1 uppercase tracking-wider text-[10px] sm:text-xs">Total Vendido — Empleado 1</p>
+                <p className="text-2xl sm:text-3xl font-black text-purple-400">${formatMoney(finanzas.ventas_por_empleado?.empleado_1 || 0)}</p>
+              </div>
+              <div className={`p-4 rounded-2xl border ${modoOscuro ? 'bg-sky-950/20 border-sky-900' : 'bg-sky-50 border-sky-100'}`}>
+                <p className="text-sky-500 font-bold mb-1 uppercase tracking-wider text-[10px] sm:text-xs">Total Vendido — Empleado 2</p>
+                <p className="text-2xl sm:text-3xl font-black text-sky-400">${formatMoney(finanzas.ventas_por_empleado?.empleado_2 || 0)}</p>
+              </div>
+            </div>
+
             <div className={`pt-4 sm:pt-6 border-t ${modoOscuro ? 'border-slate-800' : 'border-slate-200'}`}>
               <h3 className={`font-bold mb-3 sm:mb-4 uppercase text-xs sm:text-sm ${modoOscuro ? 'text-slate-400' : 'text-slate-500'}`}>Histórico de Ingresos Brutos</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
