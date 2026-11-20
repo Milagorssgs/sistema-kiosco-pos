@@ -435,10 +435,6 @@ export default function App() {
   const vueltoEfectivo = (parseFloat(pagaCon) || 0) - totalCarrito;
 
   const actualizarPrecioItem = (idx, nuevoPrecio) => {
-    if (rolUsuario !== 'admin') {
-      toast.error("Solo Empleado 1 puede aplicar descuentos o recargos.");
-      return;
-    }
     const n = [...carrito];
     n[idx].precioFinal = String(nuevoPrecio).replace(',', '.');
     setCarrito(n);
